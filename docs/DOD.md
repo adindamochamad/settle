@@ -26,7 +26,7 @@ This is CLAUDE.md rule 1 made checkable.
 - [x] R3 A valid run contains at least one `AddPartialTranscript` **and** at least one `AddTranscript`. *(verified: 19 partials, 10 finals on the smoke run)*
 - [x] R4 Real-time pacing intact and *demonstrated*: the last record's `t` is greater than or equal to the clip duration, and streaming drift (`t − audio_pos` at end of run) is reported. **Drift above 5% of clip duration voids the run.** *(verified: drift +0.0% after deadline scheduling)*
 - [x] R5 The API key never reaches disk or stdout. *(verified: .env git-ignored, never echoed)*
-- [ ] R6 An `Error` message from the server is recorded in the JSONL, never swallowed. A failed run must look failed.
+- [x] R6 An `Error` message from the server is recorded in the JSONL, never swallowed. A failed run must look failed. *(Verified 10 Sep with a deliberately wrong key, 4 attempts: found the server fails two different ways - an application-level Error message, or a protocol-level WebSocket close (4001) that used to raise unhandled and write nothing at all. Both now produce a clean Error record and exit 1.)*
 - [ ] R7 `make sweep CLIP=x` produces four files with no manual editing between them.
 
 ## 2. Analyzer

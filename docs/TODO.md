@@ -105,14 +105,17 @@ schedule assumed. Use the slack to start D3 early, not to polish.
 - [x] Warm-up is built into `make sweepall` and its first run is discarded.
       Cold start measured 3.072 s to first text against 0.512 s warm — six
       times — and would otherwise skew emission lag.
-- [ ] `make sweepall` if not already run on D1. Sequential by design — the free
-      tier allows two concurrent sessions and there is no reason to spend them.
-- [ ] Discard and re-record any run with drift over 5%, or with `Error` in it.
-- [ ] Exercise the error path once on purpose — run with a deliberately wrong
-      key and confirm the `Error` is in the JSONL and the exit code is 1. It has
-      never actually fired. **[R6]**
-- [ ] Commit every surviving run. They are the evidence, not build output.
-      **[X3]**
+- [x] `make sweepall` run on D1 — 40 runs, all committed.
+- [x] No run had drift over 5% or an `Error` — nothing to discard.
+- [x] Exercised the error path with a deliberately wrong key, 4 attempts.
+      Found a real gap doing it: the server fails two different ways - a
+      JSON `Error` message (handled), or a protocol-level WebSocket close
+      that raised unhandled and wrote nothing to the run file at all.
+      `recorder.py` restructured (connection lifecycle now wrapped in
+      `try`/`except websockets.exceptions.ConnectionClosed`) so both paths
+      log a clean Error record and exit 1. Re-verified a normal successful
+      recording still works afterward. **[R6]**
+- [x] Every surviving run committed. **[X3]**
 
 **Chart — done, Thu 10 Sep**
 
@@ -131,13 +134,12 @@ schedule assumed. Use the slack to start D3 early, not to polish.
       series. It is the number the sidecar sells and isn't on the chart yet —
       not blocking, worth 15 minutes before D3.
 
-**Numbers (~30 min)**
+**Numbers — done, Thu 10 Sep**
 
-- [ ] `make results` → paste into the README table. Never type it. **[X2]**
-- [ ] Update METHOD.md threats to validity with the corpus as recorded: clip
-      count, total audio minutes, total words, one speaker. **[C4]**
-- [ ] Pick τ from the measured distribution and write down the percentile.
-      Settling p95 is the defensible default. **[feeds S3]**
+- [x] `make results` pasted into the README table. **[X2]**
+- [x] `docs/METHOD.md` threats to validity updated to the actual corpus.
+      **[C4]**
+- [x] τ picked: 0.774s, settling p95 at `max_delay=1.0`. **[feeds S3]**
 
 > **Abort check, D2 night.** No chart? `docs/SCOPE.md` says drop the sidecar and
 > ship the instrument plus the curve. Decide tonight, not on D3.
@@ -249,10 +251,10 @@ Nothing new starts today.
 - [ ] Submit with 6 hours of buffer minimum. **[Z3]**
 - [ ] Only then, if time remains, improve anything.
 
-## Any time — the repo (~20 min, do it before D6)
+## Any time — the repo
 
-- [ ] Create the public GitHub repo and push. There is still no remote. Doing
-      this on D6 is how a broken repo link gets submitted. **[X1]**
+- [x] Public GitHub repo created and pushed:
+      github.com/adindamochamad/settle **[X1]**
 
 ---
 
