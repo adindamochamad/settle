@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+
+# Audio is large and is the developer's own voice — kept local.
+clips/*.pcm
+clips/*.m4a
+clips/*.wav
+clips/*.mp3
+
+# Measurement runs ARE the evidence. They stay in the repo on purpose.
+!runs/*.jsonl
+
+.DS_Store
