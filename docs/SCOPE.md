@@ -4,12 +4,12 @@
 
 | Day | Date | Gate |
 |---|---|---|
-| D1 | Wed 10 Sep | A JSONL run containing a partial whose text differs from the final |
-| D2 | Thu 11 Sep | Settling-time-vs-`max_delay` chart exists as an image file |
-| D3 | Fri 12 Sep | A public URL someone else can open |
-| D4 | Sat 13 Sep | **Feature freeze, 23:59.** Bug fixes only after this |
-| D5 | Sun 14 Sep | Every asset recorded. No footage left to shoot |
-| D6 | Mon 15 – Tue 16 Sep | Submitted, with at least 6 hours of buffer |
+| D1 | Thu 10 Sep | A JSONL run containing a partial whose text differs from the final |
+| D2 | Fri 11 Sep | Settling-time-vs-`max_delay` chart exists as an image file |
+| D3 | Sat 12 Sep | A public URL someone else can open |
+| D4 | Sun 13 Sep | **Feature freeze, 23:59.** Bug fixes only after this |
+| D5 | Mon 14 Sep | Every asset recorded. No footage left to shoot |
+| D6 | Tue 15 – Wed 16 Sep | Submitted, with at least 6 hours of buffer |
 
 ## Priority when time runs out
 

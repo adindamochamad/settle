@@ -38,15 +38,69 @@ refer to the same spoken word when their `[start_time, end_time]` intervals
 overlap by at least 50% of the shorter interval. Index-based matching is wrong
 here in exactly the cases the project studies.
 
-## The three quantities
+Two implementation choices follow from that rule and are stated because they
+change the numbers:
+
+- An observation binds to the **best** overlapping word, not the first one that
+  clears 50%. Adjacent short words (`is in`, `to two`) otherwise capture each
+  other and their revisions get attributed to the wrong slot.
+- A word's interval **follows its most recent observation**. The engine nudges
+  timings slightly between revisions; taking the union of every interval seen
+  instead lets one word grow until it swallows its neighbours.
+
+## Two clocks
+
+The recorder logs each message against both a **wall clock** (`t`, seconds since
+the session opened) and an **audio clock** (`audio_pos`, seconds of audio sent
+when the message arrived). They are not interchangeable and every quantity below
+names the one it uses.
+
+The wall clock leads the audio clock by the connection setup plus whatever
+pacing drift has accumulated. A *duration* measured on the wall clock is
+unaffected, because the offset cancels in the subtraction. A quantity that
+compares a message against a position in the audio is not, and must use the
+audio clock or it silently reports the TLS handshake as engine latency.
+
+Two things make up that offset, and they are handled differently.
+
+**Connection setup** — DNS, TLS and the `StartRecognition` round trip — is
+reported, never corrected. It is real, it varies per run, and it is why emission
+lag is computed on the audio clock: `audio_pos` starts at the first chunk, so
+setup cannot leak into it.
+
+**Pacing drift** is corrected at the source. The sender sleeps until an absolute
+deadline, a fixed `CHUNK_MS` step from the first chunk, with the sleep clamped at
+zero. Chunk *k* therefore never leaves before `t0 + k·CHUNK_MS`: the recorder
+cannot run faster than real time, it only stops per-iteration overhead
+accumulating. Measured on one 6.8 s clip: a plain fixed sleep drifts **+1.4%**,
+deadline scheduling **+0.0%**. Uncorrected drift inflates every wall-clock
+settling time by its own proportion, and grows with clip length.
+
+Whatever drift remains is printed at the end of every run. Above 5% the run is
+void — see `docs/DOD.md` R4.
+
+## The quantities
 
 For each word *w* in the final transcript, over one run:
 
-| Quantity | Definition |
-|---|---|
-| **emission lag** | `t_first(w) − end_time(w)` — how long after the word was spoken before any text for it appeared |
-| **settling time** | `t_last_change(w) − t_first(w)` — how long the text at that interval kept changing |
-| **revision count** | number of distinct texts observed at that interval |
+| Quantity | Clock | Definition |
+|---|---|---|
+| **emission lag** | audio | `audio_pos_first(w) − end_time(w)` — how much further the audio had to run before any text for *w* appeared |
+| **settling time** | wall | `t_last_change(w) − t_first(w)` — how long the text at that interval kept changing |
+| **risk window** | wall | `t_final(w) − t_first(w)` — how long *w* was visible to a consumer while still revisable |
+| **revision count** | — | number of distinct texts observed at that interval |
+| **revised after final** | — | whether the text at that interval ever differed from what the first `AddTranscript` reported |
+
+Emission lag can go **negative**, and that is a result rather than a fault.
+`end_time(w)` is the word's interval as finally settled. The engine sometimes
+publishes a hypothesis for an interval and then extends that interval as more
+audio arrives, so the first text for *w* can appear while *w* is still being
+spoken. Measured on a 6.8 s clip: 1 of 20 words, at −0.248 s — text first
+appeared at `audio_pos` 0.512 s for a hypothesis spanning `(0.0, 0.2)`, which
+settled as `(0.0, 0.76)`.
+
+The analyzer reports these separately as **speculative** emissions. They matter
+to the sidecar: a token can exist before the audio that decides it does.
 
 `t_first(w)` is the arrival time of the first message reporting text at *w*'s
 interval. `t_last_change(w)` is the arrival time of the last message at which
@@ -81,9 +135,25 @@ Stated up front rather than waiting to be asked.
   almost certainly varies with speaker, accent and noise profile; the absolute
   numbers here describe this speaker only. The *shape* against `max_delay` is
   the transferable result.
-- **Small corpus.** Roughly ten clips. Enough to establish the phenomenon, not
-  enough for a confidence interval. Reported as percentiles over words, with the
-  word count always shown.
+- **Cold start.** The first session opened on a key emits its first text much
+  later than subsequent ones: `audio_pos` 3.072 s on a cold session against
+  0.512 s warm, on the same clip. Emission lag from a cold first run is not
+  comparable to the rest. `make sweepall` discards a warm-up run before the
+  corpus for this reason.
+- **Small corpus.** 10 clips, ~2.0 minutes of audio, 303 final words, one
+  speaker (the author), recorded 10 Sep 2026. Enough to establish the
+  phenomenon and its shape against `max_delay`, not enough for a confidence
+  interval. Reported as percentiles over words, with the word count always
+  shown.
+- **Two clips transcribed with heavy word error rate.** Clips 07 and 08 were
+  written to probe homophone and self-correction pressure ("two two" vs "22",
+  "nobody" vs "somebody") and instead produced substantial misrecognition
+  unrelated to the targeted contrast — e.g. "vehicle" heard as "Fakel" and
+  "Collection". Their settling and revision numbers are included in the pooled
+  table because they are real engine behaviour, not excluded, but they should
+  not be read as clean examples of the specific phenomenon they were designed
+  to isolate. The D1 gate revision ("now" → "not", clip 08) came from this
+  noisier pair, not from the cleaner clips.
 - **One engine.** Only Speechmatics is measured. No claim is made about any
   other vendor; the harness is engine-agnostic but has not been run elsewhere.
 - **Synthetic dispatch consumer.** The downstream cost of a retraction is

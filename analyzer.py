@@ -4,16 +4,21 @@
     python analyzer.py --inspect runs/call1_md1.0.jsonl   # dump one payload
     python analyzer.py runs/call1_md1.0.jsonl             # measure one run
     python analyzer.py runs/*.jsonl                       # compare runs
+    python analyzer.py --table runs/*.jsonl               # the README table
 
 Definitions live in docs/METHOD.md. This module interprets; recorder.py does not.
 
 ! The payload reader below follows the documented Speechmatics results shape
 ! (results[].start_time / end_time / alternatives[0].content). Run --inspect
 ! against a real file and confirm before trusting any number this prints.
+! That check is docs/DOD.md A1, and it is blocking.
 """
 import json
 import sys
 from collections import defaultdict
+
+PARTIAL = "AddPartialTranscript"
+FINAL = "AddTranscript"
 
 
 def load(path):
@@ -35,56 +40,106 @@ def words(payload):
     return out
 
 
+def overlap(a, b):
+    """Fraction of the shorter interval that two audio intervals share."""
+    lo = max(a[0], b[0])
+    hi = min(a[1], b[1])
+    if hi <= lo:
+        return 0.0
+    shorter = min(a[1] - a[0], b[1] - b[0])
+    if shorter <= 0:
+        return 0.0
+    return (hi - lo) / shorter
+
+
 def overlaps(a, b):
     """True when two audio intervals refer to the same spoken word.
 
     Overlap of at least half the shorter interval. Index matching is wrong
     here - words get inserted and deleted mid-revision, which is the whole
-    phenomenon under study.
+    phenomenon under study. This is the single alignment rule in the project;
+    sidecar.py imports it rather than growing a second one.
     """
-    lo = max(a[0], b[0])
-    hi = min(a[1], b[1])
-    if hi <= lo:
-        return False
-    shorter = min(a[1] - a[0], b[1] - b[0])
-    return shorter <= 0 or (hi - lo) >= 0.5 * shorter
+    return overlap(a, b) >= 0.5
 
 
 def track(records):
     """Group every observation by the spoken word it refers to.
 
-    Returns {slot_index: {"span": (start, end), "obs": [(t, text), ...]}}.
+    Returns [{"span": (start, end), "obs": [(t, audio_pos, text, is_final)]}].
+
+    A word is bound to its *best* overlapping slot, not the first one that
+    clears the threshold - adjacent short words otherwise capture each other.
+    A slot's span follows the most recent observation, because the engine
+    nudges word timings between revisions; unioning the spans instead lets one
+    slot grow until it swallows its neighbours.
+
+    One message contributes at most one observation per slot. Without that,
+    two neighbouring words in the same message can both bind to it and the
+    second reads as an instant revision of the first - a revision count of 2
+    with a settling time of 0.
     """
     slots = []
     for rec in records:
-        if rec["kind"] not in ("AddPartialTranscript", "AddTranscript"):
+        if rec["kind"] not in (PARTIAL, FINAL):
             continue
+        is_final = rec["kind"] == FINAL
+        used = set()
         for start, end, text in words(rec["payload"]):
-            hit = next((s for s in slots if overlaps(s["span"], (start, end))), None)
-            if hit is None:
-                slots.append({"span": (start, end), "obs": [(rec["t"], text)]})
+            best, score = None, 0.0
+            for i, slot in enumerate(slots):
+                if i in used:
+                    continue
+                sc = overlap(slot["span"], (start, end))
+                if sc > score:
+                    best, score = i, sc
+            ob = (rec["t"], rec.get("audio_pos", rec["t"]), text, is_final)
+            if best is None or score < 0.5:
+                slots.append({"span": (start, end), "obs": [ob]})
+                used.add(len(slots) - 1)
             else:
-                hit["span"] = (min(hit["span"][0], start), max(hit["span"][1], end))
-                hit["obs"].append((rec["t"], text))
-    return {i: s for i, s in enumerate(slots)}
+                slots[best]["span"] = (start, end)
+                slots[best]["obs"].append(ob)
+                used.add(best)
+    return slots
 
 
 def settling(records):
-    """[(final_text, emission_lag, settling_time, revisions)] for one run."""
+    """One dict per spoken word in one run. See docs/METHOD.md."""
     stats = []
-    for slot in track(records).values():
+    for slot in track(records):
         obs = slot["obs"]
-        t_first = obs[0][0]
+        t_first, pos_first = obs[0][0], obs[0][1]
         t_last_change = t_first
         revisions = 1
         for i in range(1, len(obs)):
-            if obs[i][1] != obs[i - 1][1]:
+            if obs[i][2] != obs[i - 1][2]:
                 t_last_change = obs[i][0]
                 revisions += 1
-        stats.append((obs[-1][1],
-                      round(t_first - slot["span"][1], 3),
-                      round(t_last_change - t_first, 3),
-                      revisions))
+
+        # The headline question in docs/METHOD.md: once a word is reported in
+        # an AddTranscript, does its text ever change again?
+        idx = next((i for i, o in enumerate(obs) if o[3]), None)
+        if idx is None:
+            t_final, after_final = None, False
+        else:
+            t_final = obs[idx][0]
+            after_final = any(o[2] != obs[idx][2] for o in obs[idx + 1:])
+
+        stats.append({
+            "text": obs[-1][2],
+            # Emission lag is on the audio clock: how much audio had been sent
+            # when this text first appeared. Using wall-clock `t` here would
+            # fold in TLS setup and pacing drift, which are not the engine.
+            # It goes negative when the engine emitted a hypothesis before the
+            # word it later settled on had finished - see docs/METHOD.md.
+            "emission": round(pos_first - slot["span"][1], 3),
+            "settling": round(t_last_change - t_first, 3),
+            "risk": round(t_final - t_first, 3) if t_final is not None else None,
+            "revisions": revisions,
+            "after_final": after_final,
+            "finalised": t_final is not None,
+        })
     return stats
 
 
@@ -96,36 +151,120 @@ def pct(values, p):
     return ordered[idx]
 
 
-def report(path):
-    records = load(path)
-    md = next((r.get("max_delay") for r in records if r.get("max_delay")), "?")
+def offset(records):
+    """Wall clock minus audio clock at the end of a run.
+
+    Connection setup plus accumulated pacing drift. Reported, never corrected -
+    see docs/DOD.md R4.
+    """
+    if not records:
+        return 0.0
+    last = records[-1]
+    return round(last["t"] - last.get("audio_pos", last["t"]), 3)
+
+
+def read(path):
+    """(records, stats) or an explanation on stderr. Never returns junk."""
+    try:
+        records = load(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"{path}: unreadable - {exc}", file=sys.stderr)
+        return None, None
+    if not records:
+        print(f"{path}: empty run", file=sys.stderr)
+        return None, None
     stats = settling(records)
     if not stats:
-        print(f"{path}: no transcript messages found")
-        return
-    settle = [s[2] for s in stats]
-    revised = [s for s in stats if s[3] > 1]
-    print(f"\n{path}   max_delay={md}   words={len(stats)}")
-    print(f"  settling  p50 {pct(settle,50):.3f}s   p95 {pct(settle,95):.3f}s"
-          f"   p99 {pct(settle,99):.3f}s   max {max(settle):.3f}s")
-    print(f"  revised   {len(revised)}/{len(stats)} words "
-          f"({100*len(revised)/len(stats):.1f}%)")
-    for text, lag, st, rev in sorted(stats, key=lambda s: -s[2])[:5]:
-        print(f"    {text:<18} settling {st:>6.3f}s  revisions {rev}  lag {lag:>6.3f}s")
+        kinds = sorted({r.get("kind") for r in records})
+        print(f"{path}: no transcript messages found - kinds present: "
+              f"{', '.join(k for k in kinds if k)}", file=sys.stderr)
+        return None, None
+    return records, stats
+
+
+def report(path):
+    records, stats = read(path)
+    if stats is None:
+        return False
+    md = next((r.get("max_delay") for r in records if r.get("max_delay")), "?")
+    settle = [s["settling"] for s in stats]
+    emission = [s["emission"] for s in stats]
+    risk = [s["risk"] for s in stats if s["risk"] is not None]
+    revised = [s for s in stats if s["revisions"] > 1]
+    late = [s for s in stats if s["after_final"]]
+    n = len(stats)
+
+    print(f"\n{path}   max_delay={md}   words={n}   "
+          f"wall-audio offset {offset(records):+.3f}s")
+    print(f"  settling     p50 {pct(settle,50):.3f}s  p95 {pct(settle,95):.3f}s"
+          f"  p99 {pct(settle,99):.3f}s  max {max(settle):.3f}s   [wall clock]")
+    if risk:
+        print(f"  risk window  p50 {pct(risk,50):.3f}s  p95 {pct(risk,95):.3f}s"
+              f"  max {max(risk):.3f}s"
+              f"   [first text -> finalised, {len(risk)}/{n} words]")
+    print(f"  emission lag p50 {pct(emission,50):.3f}s  "
+          f"p95 {pct(emission,95):.3f}s   [audio clock]")
+    spec = sum(1 for e in emission if e < 0)
+    if spec:
+        # Not an error. A negative emission lag means text for this interval
+        # appeared while the word was still being spoken: the engine published
+        # a hypothesis, then extended the word's end_time past the point where
+        # the audio stood when it did so.
+        print(f"  speculative  {spec}/{n} words ({100*spec/n:.1f}%)"
+              f"   <- text emitted before the word finished")
+    print(f"  revised      {len(revised)}/{n} words ({100*len(revised)/n:.1f}%)")
+    print(f"  after final  {len(late)}/{n} words ({100*len(late)/n:.1f}%)"
+          f"   <- does 'final' stop changing?")
+    for s in sorted(stats, key=lambda s: -s["settling"])[:5]:
+        print(f"    {s['text']:<18} settling {s['settling']:>6.3f}s  "
+              f"revisions {s['revisions']}  lag {s['emission']:>6.3f}s")
+    return True
+
+
+def table(paths):
+    """The README results table, emitted from runs/ so it is never typed."""
+    pooled = defaultdict(list)
+    for path in paths:
+        records, stats = read(path)
+        if stats is None:
+            continue
+        md = next((r.get("max_delay") for r in records if r.get("max_delay")), None)
+        pooled[md].extend(stats)
+    if not pooled:
+        print("no usable runs", file=sys.stderr)
+        return False
+    print("| `max_delay` | words | settling p50 | settling p99 | "
+          "words revised | revised after final |")
+    print("|---|---|---|---|---|---|")
+    for md in sorted(pooled, key=lambda m: (m is None, m)):
+        stats = pooled[md]
+        settle = [s["settling"] for s in stats]
+        n = len(stats)
+        rev = sum(1 for s in stats if s["revisions"] > 1)
+        late = sum(1 for s in stats if s["after_final"])
+        print(f"| {md} | {n} | {pct(settle,50):.3f}s | {pct(settle,99):.3f}s | "
+              f"{100*rev/n:.1f}% | {100*late/n:.1f}% |")
+    return True
 
 
 def inspect(path):
     for rec in load(path):
-        if rec["kind"] == "AddPartialTranscript":
+        if rec["kind"] == PARTIAL:
             print(json.dumps(rec["payload"], indent=2)[:2000])
-            return
-    print("no AddPartialTranscript in this run - partials may be disabled")
+            return True
+    print("no AddPartialTranscript in this run - partials may be disabled",
+          file=sys.stderr)
+    return False
 
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    if args and args[0] == "--inspect":
-        inspect(args[1])
-    else:
-        for path in args:
-            report(path)
+    if not args:
+        print(__doc__, file=sys.stderr)
+        sys.exit(2)
+    if args[0] == "--inspect":
+        sys.exit(0 if inspect(args[1]) else 1)
+    if args[0] == "--table":
+        sys.exit(0 if table(args[1:]) else 1)
+    ok = [report(p) for p in args]
+    sys.exit(0 if all(ok) and ok else 1)

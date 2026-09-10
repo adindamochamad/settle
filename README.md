@@ -37,14 +37,19 @@ is what tells you the exchange rate.
 Measured on this repository's runs. See `docs/METHOD.md` for definitions and
 stated threats to validity.
 
-| `max_delay` | words | settling p50 | settling p99 | words revised |
-|---|---|---|---|---|
-| 0.7 | TBD | TBD | TBD | TBD |
-| 1.0 | TBD | TBD | TBD | TBD |
-| 2.0 | TBD | TBD | TBD | TBD |
-| 4.0 | TBD | TBD | TBD | TBD |
+| `max_delay` | words | settling p50 | settling p99 | words revised | revised after final |
+|---|---|---|---|---|---|
+| 0.7 | 322 | 0.000s | 1.023s | 32.0% | 0.0% |
+| 1.0 | 327 | 0.000s | 1.154s | 33.3% | 0.0% |
+| 2.0 | 333 | 0.000s | 1.846s | 41.4% | 0.0% |
+| 4.0 | 332 | 0.000s | 3.441s | 44.6% | 0.0% |
 
-Numbers are filled in from `runs/` only. Nothing in this table is estimated.
+This table is pasted from `make results`, never typed. Nothing in it is
+estimated. It answers the question the documentation does not: once a word is
+reported in an `AddTranscript`, does its text ever change again? Across 1,314
+observed words, zero times. Settling p99 scales with `max_delay` by a factor of
+3.4x from the shortest to the longest setting — the dial genuinely trades
+latency for stability, and the instrument is what shows the exchange rate.
 
 ## Run it
 
@@ -58,6 +63,7 @@ ffmpeg -i clips/call1.m4a -ac 1 -ar 16000 -f s16le clips/call1.pcm
 make record CLIP=call1 MD=1.0     # one run
 make sweep  CLIP=call1            # all four max_delay values
 make analyze                      # settling time across every run
+make results                      # the README table, straight from runs/
 ```
 
 `python analyzer.py --inspect runs/<file>.jsonl` dumps a raw payload if you want

@@ -30,9 +30,13 @@ downgraded the response tier.
    file in `runs/`. The judges are infrastructure engineers at Intel, Qualcomm
    and Speechmatics. A fabricated benchmark is the one mistake this project
    cannot survive. If a number is not measured yet, write `TBD`, not a guess.
-2. **Do not remove the realtime pacing** in `recorder.py`
-   (`await asyncio.sleep(CHUNK_MS / 1000)`). Sending the audio file faster than
-   real time destroys every timing measurement the project is built on.
+2. **Do not remove the realtime pacing** in `recorder.py`. Sending the audio
+   file faster than real time destroys every timing measurement the project is
+   built on. The pacing is deadline-scheduled: sleep until a fixed `CHUNK_MS`
+   step from the first chunk, clamped at zero, so chunk *k* never leaves before
+   `t0 + k·CHUNK_MS`. Changed from a plain `sleep(CHUNK_MS / 1000)` on 10 Sep
+   after a measured A/B on one clip — +1.4% drift against +0.0%. Any
+   replacement must keep the "never earlier than nominal" property.
 3. **One ASR connection, fanned out to two consumers.** Never open two sessions
    for the side-by-side demo. The free tier allows 2 concurrent realtime
    sessions, and more importantly a single stream is the only honest comparison.
