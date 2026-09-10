@@ -27,7 +27,7 @@ This is CLAUDE.md rule 1 made checkable.
 - [x] R4 Real-time pacing intact and *demonstrated*: the last record's `t` is greater than or equal to the clip duration, and streaming drift (`t − audio_pos` at end of run) is reported. **Drift above 5% of clip duration voids the run.** *(verified: drift +0.0% after deadline scheduling)*
 - [x] R5 The API key never reaches disk or stdout. *(verified: .env git-ignored, never echoed)*
 - [x] R6 An `Error` message from the server is recorded in the JSONL, never swallowed. A failed run must look failed. *(Verified 10 Sep with a deliberately wrong key, 4 attempts: found the server fails two different ways - an application-level Error message, or a protocol-level WebSocket close (4001) that used to raise unhandled and write nothing at all. Both now produce a clean Error record and exit 1.)*
-- [ ] R7 `make sweep CLIP=x` produces four files with no manual editing between them.
+- [x] R7 `make sweep CLIP=x` produces four files with no manual editing between them. *(clean loop over the four max_delay values; functionally exercised via `make sweepall` for the real corpus, 10 Sep)*
 
 ## 2. Analyzer
 
@@ -41,7 +41,7 @@ This is CLAUDE.md rule 1 made checkable.
 - [x] A8 Same input, identical output, every time.
 
 ## 3. Corpus
- *(verified)*
+
 - [x] C1 At least 8 clips, 20–60 s each, author's own voice, dispatch-style content. *(10 clips, 9.0-17.3s each - two clips 05/08 short of the 20s target, flagged for re-record before D4)*
 - [x] C2 Every clip recorded at `max_delay` ∈ {0.7, 1.0, 2.0, 4.0} — at least 32 run files, all committed. *(40 run files, all four max_delay values × 10 clips)*
 - [x] C3 At least one clip produces a **meaning-changing** revision, confirmed by reading the run file, not from memory. *(runs/08_md1.0.jsonl, span (5.6,5.76): partial "now" at audio_pos 6.4s -> final "not" at 6.784s. Gate D1.)*
@@ -49,9 +49,9 @@ This is CLAUDE.md rule 1 made checkable.
 
 ## 4. Chart
 
-- [ ] G1 An image file lives in the repo, produced by a committed script — not exported by hand from a notebook.
-- [ ] G2 Regenerable from `runs/` in one command.
-- [ ] G3 Axes labelled with units, `n` shown on the figure, clock named in the caption.
+- [x] G1 An image file lives in the repo, produced by a committed script — not exported by hand from a notebook. *(web/chart.svg, from chart.py, stdlib only)*
+- [x] G2 Regenerable from `runs/` in one command. *(`make chart`; re-verified byte-identical in a clean clone, 10 Sep)*
+- [x] G3 Axes labelled with units, `n` shown on the figure, clock named in the caption. *(per-point n, total n, "wall clock" on the y-axis)*
 - [x] G4 Legible at video resolution and on a phone screen. *(SVG, checked at 800px and 390px)*
 
 ## 5. Sidecar
@@ -96,8 +96,8 @@ This is CLAUDE.md rule 1 made checkable.
 ## 10. Repository
 
 - [x] X1 Public, with a LICENSE. *(github.com/adindamochamad/settle, MIT)*
-- [ ] X2 README contains no `TBD`.
-- [ ] X3 `runs/*.jsonl` committed — they are the evidence.
+- [x] X2 README contains no `TBD`. *(grepped 10 Sep: none)*
+- [x] X3 `runs/*.jsonl` committed — they are the evidence. *(40 files, `git ls-files runs/`)*
 - [x] X4 On a clean clone: `pip install -r requirements.txt && make analyze` reproduces the README table. *(verified 10 Sep: fresh clone + fresh venv, make results/chart/site/measure all byte-identical to committed output)*
 - [x] X5 No API key anywhere in the history, not just in the current tree. *(verified 10 Sep: `git log --all -p` searched for the key pattern, `Bearer `-prefixed strings, and `.env` ever being committed - all clean)*
 
