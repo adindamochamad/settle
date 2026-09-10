@@ -221,9 +221,9 @@ Nothing new starts today.
 - [ ] Audit every number in README, website and deck against the evidence rule.
       Anything you cannot trace to a run file in under a minute gets deleted or
       reverts to `TBD`.
-- [ ] `git log -p | grep -i` for the key — history, not just the tree. **[X5]**
-- [ ] Clean-clone test in a fresh directory: install, `make analyze`, confirm the
-      README table reproduces. **[X4]**
+- [x] Git history searched for the key — clean. **[X5]**
+- [x] Clean-clone test: fresh clone, fresh venv, `make results`/`chart`/`site`/
+      `measure` all byte-identical to committed output. **[X4]**
 - [ ] Deck: PDF, ≤ 12 slides, charts reused as the same image files, no number
       absent from the README. **[P1, P2, P3]**
 - [ ] Write the video script word for word. Improvising on D5 costs takes.

@@ -98,8 +98,8 @@ This is CLAUDE.md rule 1 made checkable.
 - [x] X1 Public, with a LICENSE. *(github.com/adindamochamad/settle, MIT)*
 - [ ] X2 README contains no `TBD`.
 - [ ] X3 `runs/*.jsonl` committed — they are the evidence.
-- [ ] X4 On a clean clone: `pip install -r requirements.txt && make analyze` reproduces the README table.
-- [ ] X5 No API key anywhere in the history, not just in the current tree.
+- [x] X4 On a clean clone: `pip install -r requirements.txt && make analyze` reproduces the README table. *(verified 10 Sep: fresh clone + fresh venv, make results/chart/site/measure all byte-identical to committed output)*
+- [x] X5 No API key anywhere in the history, not just in the current tree. *(verified 10 Sep: `git log --all -p` searched for the key pattern, `Bearer `-prefixed strings, and `.env` ever being committed - all clean)*
 
 ## 11. Submission
 
