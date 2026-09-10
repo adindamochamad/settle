@@ -66,12 +66,16 @@ def overlaps(a, b):
 def apply(slots, rec_words, is_final):
     """Update slots with one message's words - the one alignment step.
 
-    Returns (slots, touched, changed): touched is every slot index matched
-    or created by this message; changed is the subset whose text is new or
-    different from before this call. track() (batch, a whole run) and
-    sidecar.py (streaming, live or replayed) both call this, so there is
-    exactly one implementation of "which word is this, and did it change" -
-    not two. sidecar.py must not grow a second aligner; see docs/DOD.md S5.
+    Returns (slots, touched, changed, dropped): touched is every slot index
+    matched or created by this message; changed is the subset whose text is
+    new or different from before this call; dropped is the *pre-call*
+    indices retracted this call (see below) - a caller holding index-keyed
+    state (sidecar.py's pending release timers) needs the old numbering to
+    know what to cancel, since the returned slots are already renumbered.
+    track() (batch, a whole run) and sidecar.py (streaming, live or
+    replayed) both call this, so there is exactly one implementation of
+    "which word is this, did it change, was it retracted" - not two.
+    sidecar.py must not grow a second aligner; see docs/DOD.md S5.
 
     A word is bound to its *best* overlapping slot, not the first one that
     clears the threshold - adjacent short words otherwise capture each other.
@@ -118,16 +122,18 @@ def apply(slots, rec_words, is_final):
             used.add(best)
 
     touched = used
+    dropped = set()
     if rec_words:
         frontier = min(s for s, _, _ in rec_words)
         keep = [i for i, s in enumerate(slots)
                 if i in used or s["locked"] or s["span"][1] > frontier]
         if len(keep) != len(slots):
+            dropped = set(range(len(slots))) - set(keep)
             new_index = {old_i: new_i for new_i, old_i in enumerate(keep)}
             slots = [slots[i] for i in keep]
             touched = {new_index[i] for i in touched if i in new_index}
             changed = {new_index[i] for i in changed if i in new_index}
-    return slots, touched, changed
+    return slots, touched, changed, dropped
 
 
 def track(records):
@@ -149,7 +155,7 @@ def track(records):
             continue
         is_final = rec["kind"] == FINAL
         rec_words = words(rec["payload"])
-        slots, touched, _ = apply(slots, rec_words, is_final)
+        slots, touched, _changed, _dropped = apply(slots, rec_words, is_final)
         for i in touched:
             slots[i].setdefault("obs", []).append(
                 (rec["t"], rec.get("audio_pos", rec["t"]), slots[i]["text"], is_final))

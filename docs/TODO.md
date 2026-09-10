@@ -163,29 +163,50 @@ had no way to detect a word the engine hypothesised and then fully retracted
 (deleted, not revised). Fixed in both `analyzer.py` and the site's JS port —
 see the 10 Sep commit for the full story. All published numbers are post-fix.
 
-**Sidecar (~3 h)**
+**Sidecar — done, Thu 10 Sep**
 
-- [ ] Replace the `NotImplementedError`. One upstream connection, fanned out to
-      `/ws/naive` and `/ws/settled`, byte-identical input to both. **[S1, S2]**
-- [ ] Hold policy: release a token once its text has been unchanged for τ.
-      Import `analyzer.overlaps()`; a second aligner is a failure. **[S5]**
-- [ ] τ settable at connect time, default from D2's measurement, percentile
-      recorded in the README. **[S3]**
-- [ ] Handle speculative emission: a word's interval can still be growing when
-      its text looks stable. Releasing on a span that is still extending is the
-      one way this policy can be wrong on its own terms. Decide the rule and
-      write it down.
-- [ ] JSONL replay source alongside the live source. **[S6]**
-- [ ] Measure residual retraction rate and added latency per token over the
-      corpus. Report both even if the retraction rate is not zero. **[S4, S7]**
+- [x] Replaced the `NotImplementedError`. Hub owns one replay task, fanned out
+      to `/ws/naive` and `/ws/settled` via per-subscriber queues, backfilled
+      from a run log so a client connecting even slightly late still gets the
+      full sequence - closes a real race, found by testing three demo runs in
+      a row and the second one hanging. **[S2]** (S1 is scoped to replay only
+      this pass - see the "not built" note below.)
+- [x] Hold policy: release a token once unchanged for τ. Imports
+      `analyzer.apply()` (built on `overlap()`); no second aligner. **[S5]**
+- [x] τ settable via `?tau=` on connect; default 0.774s = settling p95 at
+      `max_delay=1.0`, in README. **[S3]**
+- [x] Speculative emission decision: no special-case handling added. τ is
+      defined purely on text-stability (`t_last_change`, per docs/METHOD.md),
+      and a word's span drifting while its text stays constant is, by that
+      same definition, a settled word regardless of span movement - engineering
+      around it would contradict the metric the sidecar is built to honor. The
+      real risk this note was pointing at is retraction, not speculative
+      emission, and that one IS handled (`settled_stream()` cancels a pending
+      release the moment its slot is dropped) and measured (S4).
+- [x] Replay source, from a committed run. **Live source not built this
+      pass** - a deliberate scope call (see the open decision below), not an
+      oversight. **[S6 partial]**
+- [x] Residual retraction rate and added latency per token, measured over the
+      corpus via `sidecar.py`'s own `simulate_settled()`/`measure()` (the
+      identical policy, run at logical speed instead of real time) and
+      `make measure`. 4.2% retraction / 0.774s p50 added latency at md=1.0
+      (where τ was calibrated); 13.9% / varies across all four max_delay
+      pooled - τ doesn't transfer across max_delay settings, see README.
+      **[S4, S7]**
+- [x] Speculative emission: decided no special handling - see the resolved
+      item above, settling is text-only by definition.
 
-**Consumers (~90 min)**
+**Consumers — done, Thu 10 Sep**
 
-- [ ] Replace the `NotImplementedError`. One keyword tiering function, two
-      streams, irreversible time-stamped actions. **[U1, U2, U4]**
-- [ ] Lock the canonical demo clip — naive fires the wrong tier, settled does
-      not, every run. Record its name in the README. **[U3]**
-- [ ] `make demo` reproduces it without arguments.
+- [x] Replaced the `NotImplementedError`. `Consumer` class, shared
+      `tier_for()`, append-only timestamped `.actions`. **[U1, U2, U4]**
+- [x] Canonical demo clip locked: `runs/09_md1.0.jsonl`. A misheard partial
+      ("working fire me") makes naive fire `ELEVATED - FIRE` - a false alarm -
+      before correcting through `STANDARD` to the true `CRITICAL - RESCUE`;
+      settled, τ=0.774s, only ever shows the correct tier. Verified
+      reproducible across 4 separate live runs. In README. **[U3]**
+- [x] `make demo` - no arguments, starts the sidecar, runs both consumers,
+      tears it down. Tested from a cold start (port not already bound).
 
 ## D4 — Sun 13 Sep · Feature freeze 23:59
 
@@ -243,4 +264,5 @@ Nothing new starts today.
 | 2 | Public URL shape | Static GitHub Pages replaying a committed run. It is the abort path already — build it as the primary. |
 | 3 | Pacing drift | **Settled 10 Sep: deadline scheduling.** The original recommendation here rested on a drift figure that turned out to be a measurement bug. Measured A/B: fixed sleep +1.4%, deadline +0.0%, and it cannot send faster than real time. |
 | 4 | This file in the repo | `docs/DOD.md` is worth showing a judge. This file is internal; gitignore it if the repo should stay lean. |
-| 5 | τ default | Open until D2. Settling p95 is the defensible choice; the number itself comes from the corpus, not from the smoke clip. |
+| 5 | τ default | **Settled: 0.774s** — settling p95 at `max_delay=1.0`, from the real corpus. |
+| 6 | Sidecar upstream source | **Settled 10 Sep: replay only.** Live would mean adding reusable connection logic to recorder.py mid-feature, risking the one file CLAUDE.md rule 2 protects most. `docs/SCOPE.md` already treats replay-only as complete, not a cut corner. Live is a real, scoped follow-up if time allows: pull `websockets.connect(...)` out of `record()` into something both files call, without touching the pacing loop. |

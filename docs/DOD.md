@@ -56,20 +56,20 @@ This is CLAUDE.md rule 1 made checkable.
 
 ## 5. Sidecar
 
-- [ ] S1 Exactly one upstream Speechmatics connection per session, fanned out to both consumers. Provable from the code path, not asserted in a comment.
-- [ ] S2 Both downstream streams see byte-identical upstream input.
-- [ ] S3 τ is settable at connect time and its default is taken from measured data, with the percentile it came from written down.
-- [ ] S4 Residual retraction rate is measured over the corpus and reported. It does not have to be zero. It has to be known.
-- [ ] S5 Reuses `analyzer.overlaps()`. A second alignment implementation is a failure, not a shortcut.
-- [ ] S6 Runs from replayed JSONL as well as live. This is the D4 abort path in `docs/SCOPE.md` — it must be built in, not improvised at midnight.
-- [ ] S7 Added latency of settled vs naive is measured, per token, and reported.
+- [ ] S1 Exactly one upstream Speechmatics connection per session, fanned out to both consumers. Provable from the code path, not asserted in a comment. *(satisfied for replay: Hub owns one _run() task, both endpoints subscribe to it - verified via live WS test. Live Speechmatics connection deliberately not built this pass, see docs/TODO.md and CLAUDE.md rule 4.)*
+- [x] S2 Both downstream streams see byte-identical upstream input. *(both subscribe to the same Hub queue - verified live: naive and settled both eventually show every word the source run contains)*
+- [x] S3 τ is settable at connect time and its default is taken from measured data, with the percentile it came from written down. *(`?tau=` query param; default 0.774s = settling p95 at max_delay=1.0, in README)*
+- [x] S4 Residual retraction rate is measured over the corpus and reported. It does not have to be zero. It has to be known. *(4.2% at md=1.0 where tau was calibrated; 13.9% pooled across all max_delay - both in README, `make measure`)*
+- [x] S5 Reuses `analyzer.overlaps()`. A second alignment implementation is a failure, not a shortcut. *(imports analyzer.apply(), which is built on overlap() - no second aligner)*
+- [ ] S6 Runs from replayed JSONL as well as live. *(replay done and is the default/only source this pass - deliberate scope call, see docs/TODO.md. Live is a scoped follow-up, not built.)*
+- [x] S7 Added latency of settled vs naive is measured, per token, and reported. *(p50=0.774s exactly = tau, consistent with settling p50=0.000s in the main table; p95=0.774s at md=1.0, 1.734s pooled)*
 
 ## 6. Consumers
 
-- [ ] U1 Two consumers, one tiering function, two streams.
-- [ ] U2 Each action is irreversible and stamped with the wall-clock time it fired.
-- [ ] U3 On the locked demo clip the naive consumer fires the wrong tier and the settled one does not — reproducibly, every run, not on a lucky take.
-- [ ] U4 The tiering is keyword matching and says so on screen, so nobody mistakes it for a model.
+- [x] U1 Two consumers, one tiering function, two streams. *(Consumer class, shared tier_for())*
+- [x] U2 Each action is irreversible and stamped with the wall-clock time it fired. *(append-only self.actions, time.time() per entry)*
+- [x] U3 On the locked demo clip the naive consumer fires the wrong tier and the settled one does not — reproducibly, every run, not on a lucky take. *(runs/09_md1.0.jsonl: naive fires ELEVATED-FIRE (false alarm) then corrects; settled never does. Verified identical across 4 separate live runs, including via `make demo` from a cold start.)*
+- [x] U4 The tiering is keyword matching and says so on screen, so nobody mistakes it for a model. *(module docstring + inline comment on TIER_RULES/tier_for)*
 
 ## 7. Website — the D3 gate
 

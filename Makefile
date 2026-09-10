@@ -2,7 +2,7 @@ PY ?= $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
 CLIP ?= call1
 MD ?= 1.0
 
-.PHONY: setup prep record sweep sweepall analyze results chart site sidecar clean
+.PHONY: setup prep record sweep sweepall analyze results chart site sidecar measure demo clean
 
 setup:
 	$(PY) -m pip install -r requirements.txt
@@ -52,6 +52,17 @@ site: chart
 
 sidecar:
 	$(PY) -m uvicorn sidecar:app --reload --port 8000
+
+measure:
+	$(PY) sidecar.py 0.774 runs/*_md1.0.jsonl
+
+demo:
+	@pkill -f "uvicorn sidecar:app" 2>/dev/null; sleep 1; \
+	$(PY) -m uvicorn sidecar:app --port 8000 >/tmp/settle_sidecar.log 2>&1 & \
+	pid=$$!; \
+	sleep 2; \
+	$(PY) consumers.py; \
+	kill $$pid 2>/dev/null
 
 clean:
 	rm -rf __pycache__

@@ -55,6 +55,44 @@ latency for stability, and the instrument is what shows the exchange rate.
 
 `make chart` regenerates this from `runs/` — see `chart.py`.
 
+## The sidecar
+
+`sidecar.py` holds a word until its text has been stable for **τ**, then
+releases it. Default τ = **0.774s** — settling p95 at `max_delay=1.0`, the
+Makefile's own default setting. `make measure` reproduces the numbers below
+from `runs/`.
+
+| | tokens | residual retraction | added latency p50 | p95 |
+|---|---|---|---|---|
+| md=1.0 (τ calibrated here) | 307 | 4.2% | 0.774s | 0.774s |
+| all four `max_delay` pooled | 1,400 | 13.9% | 0.774s | 1.734s |
+
+τ does not transfer across `max_delay` settings — the same 0.774s that holds
+retraction to 2.3% at `max_delay=0.7` lets it climb to 24.9% at `max_delay=4.0`,
+because settling simply takes longer there. A deployed sidecar should pick τ
+for the `max_delay` it is actually paired with, not reuse one default.
+Residual retraction is not a bug to engineer away — `settled_stream()` cancels
+a pending release the moment the engine retracts its word, but a release that
+already went out can't be recalled. τ trades latency for a *lower*, not a
+*zero*, chance of announcing something the engine later takes back.
+p50 added latency equalling τ exactly is the same finding as the main table
+from a different angle: settling p50 is 0.000s, so most released tokens were
+never revised at all — their only wait was τ itself.
+
+## The demo
+
+`make demo` starts the sidecar, runs both consumers against it, and prints
+the comparison — no arguments, no setup.
+
+Canonical clip: **`runs/09_md1.0.jsonl`** (clip 09, the background-noise
+clip). Locked because it reproducibly shows the naive/settled divergence
+end to end: a partial garbles `"working fire me"`, and the naive consumer
+fires `ELEVATED - FIRE` — a false alarm — before correcting itself to
+`STANDARD` and finally `CRITICAL - RESCUE` once `trapped` locks in. The
+settled consumer, reading the same upstream feed with τ = 0.774s, never
+sees the false alarm at all; its first and only tier is the correct one.
+Verified reproducible across repeated runs against the same replay.
+
 ## Run it
 
 ```bash
