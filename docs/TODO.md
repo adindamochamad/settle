@@ -214,13 +214,22 @@ see the 10 Sep commit for the full story. All published numbers are post-fix.
 
 Nothing new starts today.
 
-- [ ] Morning: finish D3 slippage only.
-- [ ] Run the full demo three times cleanly, end to end. Three, not one.
-- [ ] Walk `docs/DOD.md` top to bottom. Tick or formally cut every box. An
-      untouched box is not a cut.
-- [ ] Audit every number in README, website and deck against the evidence rule.
-      Anything you cannot trace to a run file in under a minute gets deleted or
-      reverts to `TBD`.
+- [x] D3 had no slippage - website, sidecar, consumers all closed same day.
+- [x] Demo run cleanly 4 separate times (U3 verification) plus once more via
+      `make demo`. Consistent every time.
+- [x] Walked `docs/DOD.md` top to bottom - found and fixed a real bug in the
+      walk itself (G1-G3/R7/X2/X3 were silently never ticked, see the 10 Sep
+      commit). Corrected tally: 42/55. Remaining 13 are S1/S6 (explained scope
+      cut) plus deck/video/submission, none of which are code gaps.
+- [x] Audited every number in README, index.html, docs/METHOD.md, SCOPE.md and
+      PITCH.md against fresh output from `runs/`. Found two real violations,
+      both untouched since the original scaffold: a fabricated "800 ms" in
+      README's opening line, and both README's closing section and PITCH.md's
+      cold-open script still describing the scripted `no one`/`someone` flip
+      that never actually happened in the recorded corpus (confirmed back on
+      D1) as if it were the real demo. Both fixed to the real, verified
+      clip 09 ELEVATED-FIRE false alarm. Deck doesn't exist yet - nothing to
+      audit there until it's built.
 - [x] Git history searched for the key — clean. **[X5]**
 - [x] Clean-clone test: fresh clone, fresh venv, `make results`/`chart`/`site`/
       `measure` all byte-identical to committed output. **[X4]**
