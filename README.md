@@ -7,9 +7,10 @@ Speechmatics track · AI Infra Summit Hackathon 2026
 ---
 
 Streaming speech recognition emits partial hypotheses that get revised. A word
-appears, looks settled, and is rewritten 800 ms later. Anything downstream that
-acts on the stream — an agent, a command handler, a dispatch console — has
-already acted.
+can appear, look settled, and still be rewritten up to 0.774s later — the
+measured p95 in this repository's own corpus at `max_delay=1.0`. Anything
+downstream that acts on the stream — an agent, a command handler, a dispatch
+console — has already acted.
 
 Vendors publish word error rate and latency. Both describe endpoints. Neither
 describes the interval in between, where the text is visible, plausible, and
@@ -126,10 +127,12 @@ runs/          recorded sessions — the evidence, kept in the repo
 
 ## Why the demo is a dispatch call
 
-A retraction has to cost something before the problem is legible. In a note-taking
-app a revised word is a typo. In emergency dispatch, a partial reading
-`no one is trapped inside` that resolves to `someone is trapped inside` has
-already downgraded the response tier by the time it is corrected.
+A retraction has to cost something before the problem is legible. In a
+note-taking app a revised word is a typo. In emergency dispatch, this
+repository's own locked demo clip (see "The demo" above) shows a partial
+misheard as `working fire me`, which fires an `ELEVATED - FIRE` dispatch
+tier — a false alarm — before the engine corrects itself. By the time it is
+corrected, a naive consumer has already acted on it.
 
 All audio is recorded by the author for this project. No real emergency calls
 were used.

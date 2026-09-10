@@ -5,7 +5,7 @@ rest is watched. No team introduction, no title card, no "hi, we are".
 
 | Time | Content |
 |---|---|
-| 0:00–0:12 | **Cold open.** The dispatch clip plays. The text visibly flips from `no one is trapped` to `someone is trapped`. Freeze on the naive consumer's already-sent action. |
+| 0:00–0:12 | **Cold open.** The locked demo clip plays (`runs/09_md1.0.jsonl` — see README "The demo"). A partial misheard as `working fire me` fires `ELEVATED - FIRE` on the naive console — a false alarm. Freeze on it, already sent, before the correction lands. |
 | 0:12–0:40 | The gap: vendors publish WER and latency. Nobody publishes settling time. State the thesis in one sentence. |
 | 0:40–1:10 | What settling time is — the control-theory step response and its tolerance band, 30 seconds, visual. |
 | 1:10–2:50 | **The side-by-side demo, full run.** The largest block. Do not shorten this to make room for anything else. |
