@@ -63,9 +63,18 @@ Same audio interval, different meaning. **[C3]**
 
 README and `docs/METHOD.md` filled from `make results` — no longer `TBD`.
 **[C4]** Headline: **0.0% of words changed after their `AddTranscript`**,
-across 1,314 words at all four `max_delay` settings. Settling p99 scales
-3.4x from `max_delay=0.7` to `4.0` (1.023s → 3.441s) — that scaling is the
+across 1,227 words at all four `max_delay` settings. Settling p99 scales
+3.5x from `max_delay=0.7` to `4.0` (0.985s → 3.441s) — that scaling is the
 sweep's actual result.
+
+**Correctness fix, found while building the website (below): `analyzer.track()`
+had no way to detect a word the engine hypothesised and then fully retracted
+(not revised - deleted, with no replacement). Confirmed against
+`metadata.transcript` on a real run (clip 09: a partial reads "Recording", the
+next `AddTranscript` reports `""`). Fixed by dropping any unlocked slot once
+processing's frontier has moved past its span without re-touching it. Word
+counts dropped ~1-3% per bucket (phantom words removed); the 0.0%
+after-final headline was unaffected. All numbers above are post-fix.
 
 **Two things to fix, not blocking, before D4:**
 

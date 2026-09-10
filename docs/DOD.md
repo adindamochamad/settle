@@ -32,7 +32,7 @@ This is CLAUDE.md rule 1 made checkable.
 ## 2. Analyzer
 
 - [x] A1 **Blocking gate.** `--inspect` has been run against a real recording and the field names in `words()` confirmed against the actual wire format. Until this is ticked, no number this file prints may be quoted anywhere. *(CLEARED 10 Sep: results[].type is word|punctuation, start_time/end_time/alternatives[0].content confirmed against a real AddPartialTranscript)*
-- [x] A2 Word alignment picks the *best* overlapping slot, not the first one found. *(implemented, fixture-verified)*
+- [x] A2 Word alignment picks the *best* overlapping slot, not the first one found. *(implemented, fixture-verified; retraction handling added 10 Sep after a real orphan-word bug found via the website - see docs/TODO.md)*
 - [x] A3 Emission lag is computed on the audio clock (`audio_pos − end_time`), not the wall clock — the wall clock carries connection-setup offset and pacing drift that have nothing to do with the engine. *(implemented, fixture-verified against an injected 0.300s offset)*
 - [x] A4 Per run it reports: `n` words, settling p50/p95/p99/max, share of words revised at least once. *(verified; report also carries risk window, emission lag, speculative and after-final)*
 - [x] A5 **The sweep's headline question is answerable.** For each run: how many words changed *after* the first `AddTranscript` that covered them, and by how much. Both answers are publishable; not having the number is not. *(implemented; reads 0/20 on the smoke run)*
@@ -45,7 +45,7 @@ This is CLAUDE.md rule 1 made checkable.
 - [x] C1 At least 8 clips, 20–60 s each, author's own voice, dispatch-style content. *(10 clips, 9.0-17.3s each - two clips 05/08 short of the 20s target, flagged for re-record before D4)*
 - [x] C2 Every clip recorded at `max_delay` ∈ {0.7, 1.0, 2.0, 4.0} — at least 32 run files, all committed. *(40 run files, all four max_delay values × 10 clips)*
 - [x] C3 At least one clip produces a **meaning-changing** revision, confirmed by reading the run file, not from memory. *(runs/08_md1.0.jsonl, span (5.6,5.76): partial "now" at audio_pos 6.4s -> final "not" at 6.784s. Gate D1.)*
-- [x] C4 `docs/METHOD.md` "threats to validity" is updated to the corpus as actually recorded: clip count, total audio minutes, total words, speaker count. *(10 clips, 2.0 min, 303 words, 1 speaker)*
+- [x] C4 `docs/METHOD.md` "threats to validity" is updated to the corpus as actually recorded: clip count, total audio minutes, total words, speaker count. *(10 clips, 2.0 min, 304 words, 1 speaker)*
 
 ## 4. Chart
 
@@ -74,9 +74,9 @@ This is CLAUDE.md rule 1 made checkable.
 ## 7. Website — the D3 gate
 
 - [ ] W1 A public URL a stranger can open. No login, no API key, no build step for the visitor.
-- [ ] W2 Loads with no backend, replaying a committed run. It cannot break while a judge is watching.
-- [ ] W3 Three sections: the flip, the curve, what settling time is. Not four.
-- [ ] W4 Every number on the page came out of `analyzer.py --table`.
+- [x] W2 Loads with no backend, replaying a committed run. It cannot break while a judge is watching. *(static, fetches web/data.json, no server-side code)*
+- [x] W3 Three sections: the flip, the curve, what settling time is. Not four.
+- [x] W4 Every number on the page came out of `analyzer.py --table`. *(RESULTS array in index.html matches make results verbatim)*
 - [ ] W5 Renders on a phone, and at 1080p for the screen recording.
 
 ## 8. Deck

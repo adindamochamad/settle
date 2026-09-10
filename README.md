@@ -39,16 +39,16 @@ stated threats to validity.
 
 | `max_delay` | words | settling p50 | settling p99 | words revised | revised after final |
 |---|---|---|---|---|---|
-| 0.7 | 322 | 0.000s | 1.023s | 32.0% | 0.0% |
-| 1.0 | 327 | 0.000s | 1.154s | 33.3% | 0.0% |
-| 2.0 | 333 | 0.000s | 1.846s | 41.4% | 0.0% |
-| 4.0 | 332 | 0.000s | 3.441s | 44.6% | 0.0% |
+| 0.7 | 308 | 0.000s | 0.985s | 32.8% | 0.0% |
+| 1.0 | 304 | 0.000s | 1.154s | 33.6% | 0.0% |
+| 2.0 | 304 | 0.000s | 1.846s | 41.4% | 0.0% |
+| 4.0 | 311 | 0.000s | 3.441s | 45.0% | 0.0% |
 
 This table is pasted from `make results`, never typed. Nothing in it is
 estimated. It answers the question the documentation does not: once a word is
-reported in an `AddTranscript`, does its text ever change again? Across 1,314
+reported in an `AddTranscript`, does its text ever change again? Across 1,227
 observed words, zero times. Settling p99 scales with `max_delay` by a factor of
-3.4x from the shortest to the longest setting — the dial genuinely trades
+3.5x from the shortest to the longest setting — the dial genuinely trades
 latency for stability, and the instrument is what shows the exchange rate.
 
 ![settling time vs max_delay](web/chart.svg)

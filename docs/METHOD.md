@@ -140,11 +140,11 @@ Stated up front rather than waiting to be asked.
   0.512 s warm, on the same clip. Emission lag from a cold first run is not
   comparable to the rest. `make sweepall` discards a warm-up run before the
   corpus for this reason.
-- **Small corpus.** 10 clips, ~2.0 minutes of audio, 303 final words, one
-  speaker (the author), recorded 10 Sep 2026. Enough to establish the
-  phenomenon and its shape against `max_delay`, not enough for a confidence
-  interval. Reported as percentiles over words, with the word count always
-  shown.
+- **Small corpus.** 10 clips, ~2.0 minutes of audio, 304 words (`track()`
+  slot count, md=1.0), one speaker (the author), recorded 10 Sep 2026. Enough
+  to establish the phenomenon and its shape against `max_delay`, not enough for
+  a confidence interval. Reported as percentiles over words, with the word
+  count always shown.
 - **Two clips transcribed with heavy word error rate.** Clips 07 and 08 were
   written to probe homophone and self-correction pressure ("two two" vs "22",
   "nobody" vs "somebody") and instead produced substantial misrecognition

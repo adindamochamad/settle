@@ -78,14 +78,25 @@ def track(records):
     two neighbouring words in the same message can both bind to it and the
     second reads as an instant revision of the first - a revision count of 2
     with a settling time of 0.
+
+    Retraction: the engine sometimes drops a word it had hypothesised, with
+    no replacement - not a revision to different text, a deletion. A trailing
+    AddTranscript with zero words is the clearest case (confirmed against
+    metadata.transcript on a real run: it reports "", not a shorter string).
+    There is no direct signal for this in results[], so it is inferred: once
+    processing's frontier (the earliest start_time in a message's words) has
+    moved past a slot's span and that slot was never part of any AddTranscript,
+    it will not be mentioned again - drop it. A slot already finalised is
+    never dropped; the corpus shows finals do not retract (see README).
     """
     slots = []
     for rec in records:
         if rec["kind"] not in (PARTIAL, FINAL):
             continue
         is_final = rec["kind"] == FINAL
+        rec_words = words(rec["payload"])
         used = set()
-        for start, end, text in words(rec["payload"]):
+        for start, end, text in rec_words:
             best, score = None, 0.0
             for i, slot in enumerate(slots):
                 if i in used:
@@ -95,12 +106,19 @@ def track(records):
                     best, score = i, sc
             ob = (rec["t"], rec.get("audio_pos", rec["t"]), text, is_final)
             if best is None or score < 0.5:
-                slots.append({"span": (start, end), "obs": [ob]})
+                slots.append({"span": (start, end), "obs": [ob], "locked": is_final})
                 used.add(len(slots) - 1)
             else:
                 slots[best]["span"] = (start, end)
                 slots[best]["obs"].append(ob)
+                if is_final:
+                    slots[best]["locked"] = True
                 used.add(best)
+
+        if rec_words:
+            frontier = min(s for s, _, _ in rec_words)
+            slots = [s for i, s in enumerate(slots)
+                     if i in used or s["locked"] or s["span"][1] > frontier]
     return slots
 
 

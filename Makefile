@@ -2,7 +2,7 @@ PY ?= $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
 CLIP ?= call1
 MD ?= 1.0
 
-.PHONY: setup prep record sweep sweepall analyze results chart sidecar clean
+.PHONY: setup prep record sweep sweepall analyze results chart site sidecar clean
 
 setup:
 	$(PY) -m pip install -r requirements.txt
@@ -45,6 +45,10 @@ chart:
 	@mkdir -p web
 	$(PY) chart.py runs/*.jsonl > web/chart.svg
 	@echo "web/chart.svg written"
+
+site: chart
+	$(PY) web/gendata.py runs/09_md1.0.jsonl > web/data.json
+	@echo "web/data.json written"
 
 sidecar:
 	$(PY) -m uvicorn sidecar:app --reload --port 8000
