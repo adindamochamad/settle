@@ -63,10 +63,15 @@ def overlaps(a, b):
     return overlap(a, b) >= 0.5
 
 
-def track(records):
-    """Group every observation by the spoken word it refers to.
+def apply(slots, rec_words, is_final):
+    """Update slots with one message's words - the one alignment step.
 
-    Returns [{"span": (start, end), "obs": [(t, audio_pos, text, is_final)]}].
+    Returns (slots, touched, changed): touched is every slot index matched
+    or created by this message; changed is the subset whose text is new or
+    different from before this call. track() (batch, a whole run) and
+    sidecar.py (streaming, live or replayed) both call this, so there is
+    exactly one implementation of "which word is this, and did it change" -
+    not two. sidecar.py must not grow a second aligner; see docs/DOD.md S5.
 
     A word is bound to its *best* overlapping slot, not the first one that
     clears the threshold - adjacent short words otherwise capture each other.
@@ -89,36 +94,65 @@ def track(records):
     it will not be mentioned again - drop it. A slot already finalised is
     never dropped; the corpus shows finals do not retract (see README).
     """
+    used = set()
+    changed = set()
+    for start, end, text in rec_words:
+        best, score = None, 0.0
+        for i, slot in enumerate(slots):
+            if i in used:
+                continue
+            sc = overlap(slot["span"], (start, end))
+            if sc > score:
+                best, score = i, sc
+        if best is None or score < 0.5:
+            slots.append({"span": (start, end), "text": text, "locked": is_final})
+            used.add(len(slots) - 1)
+            changed.add(len(slots) - 1)
+        else:
+            if slots[best]["text"] != text:
+                changed.add(best)
+            slots[best]["span"] = (start, end)
+            slots[best]["text"] = text
+            if is_final:
+                slots[best]["locked"] = True
+            used.add(best)
+
+    touched = used
+    if rec_words:
+        frontier = min(s for s, _, _ in rec_words)
+        keep = [i for i, s in enumerate(slots)
+                if i in used or s["locked"] or s["span"][1] > frontier]
+        if len(keep) != len(slots):
+            new_index = {old_i: new_i for new_i, old_i in enumerate(keep)}
+            slots = [slots[i] for i in keep]
+            touched = {new_index[i] for i in touched if i in new_index}
+            changed = {new_index[i] for i in changed if i in new_index}
+    return slots, touched, changed
+
+
+def track(records):
+    """Group every observation by the spoken word it refers to, over a whole
+    run - the offline/batch use of apply(). See apply()'s docstring for the
+    alignment rule itself.
+
+    Returns [{"span": (start, end), "text": str, "locked": bool,
+    "obs": [(t, audio_pos, text, is_final)]}]. "obs" is the arrival history
+    settling() needs (t_first, t_last_change, first-final timestamp); it gets
+    one entry per message that touches a slot, matching every message
+    apply() bound a word to for that slot - not just the ones that changed
+    its text, since a slot's first *final* matters even when its text was
+    already stable.
+    """
     slots = []
     for rec in records:
         if rec["kind"] not in (PARTIAL, FINAL):
             continue
         is_final = rec["kind"] == FINAL
         rec_words = words(rec["payload"])
-        used = set()
-        for start, end, text in rec_words:
-            best, score = None, 0.0
-            for i, slot in enumerate(slots):
-                if i in used:
-                    continue
-                sc = overlap(slot["span"], (start, end))
-                if sc > score:
-                    best, score = i, sc
-            ob = (rec["t"], rec.get("audio_pos", rec["t"]), text, is_final)
-            if best is None or score < 0.5:
-                slots.append({"span": (start, end), "obs": [ob], "locked": is_final})
-                used.add(len(slots) - 1)
-            else:
-                slots[best]["span"] = (start, end)
-                slots[best]["obs"].append(ob)
-                if is_final:
-                    slots[best]["locked"] = True
-                used.add(best)
-
-        if rec_words:
-            frontier = min(s for s, _, _ in rec_words)
-            slots = [s for i, s in enumerate(slots)
-                     if i in used or s["locked"] or s["span"][1] > frontier]
+        slots, touched, _ = apply(slots, rec_words, is_final)
+        for i in touched:
+            slots[i].setdefault("obs", []).append(
+                (rec["t"], rec.get("audio_pos", rec["t"]), slots[i]["text"], is_final))
     return slots
 
 
