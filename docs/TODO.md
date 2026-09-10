@@ -148,11 +148,20 @@ schedule assumed. Use the slack to start D3 early, not to polish.
 as the primary means the fallback is already done and a live sidecar is upside
 rather than risk. No backend, no key, nothing to fall over while a judge watches.
 
-- [ ] `web/` — three sections, static, replaying a committed run client-side:
-      the flip, the curve, what settling time is. Not four sections. **[W2, W3]**
-- [ ] Every number on the page from `analyzer.py --table`. **[W4]**
-- [ ] Publish to GitHub Pages. Open it from a phone on mobile data — not
-      localhost, not this machine. **Gate D3.** **[W1, W5]**
+- [x] `web/` — three sections, static, replaying a committed run client-side:
+      the flip, the curve, what settling time is. **[W2, W3]**
+- [x] Every number on the page from `analyzer.py --table`. **[W4]**
+- [x] Published to GitHub Pages, verified live via curl (not localhost).
+      **Gate D3 passed.** **[W1]**
+      **https://adindamochamad.github.io/settle/**
+- [ ] W5 checked at 390px/800px via thumbnail rendering, not on an actual
+      physical phone yet — open the live URL on a real phone once to confirm
+      before D4.
+
+**Found and fixed while testing the replay in a real browser:** `analyzer.py`
+had no way to detect a word the engine hypothesised and then fully retracted
+(deleted, not revised). Fixed in both `analyzer.py` and the site's JS port —
+see the 10 Sep commit for the full story. All published numbers are post-fix.
 
 **Sidecar (~3 h)**
 

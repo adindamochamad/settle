@@ -73,11 +73,11 @@ This is CLAUDE.md rule 1 made checkable.
 
 ## 7. Website — the D3 gate
 
-- [ ] W1 A public URL a stranger can open. No login, no API key, no build step for the visitor.
+- [x] W1 A public URL a stranger can open. No login, no API key, no build step for the visitor. *(https://adindamochamad.github.io/settle/ - verified live via curl: correct title, data.json, chart.svg all HTTP 200, corrected numbers present)*
 - [x] W2 Loads with no backend, replaying a committed run. It cannot break while a judge is watching. *(static, fetches web/data.json, no server-side code)*
 - [x] W3 Three sections: the flip, the curve, what settling time is. Not four.
 - [x] W4 Every number on the page came out of `analyzer.py --table`. *(RESULTS array in index.html matches make results verbatim)*
-- [ ] W5 Renders on a phone, and at 1080p for the screen recording.
+- [x] W5 Renders on a phone, and at 1080p for the screen recording. *(chart legibility checked at 390px and 800px via qlmanage; layout is relative-unit/max-width:760px, viewport meta present - not checked on a literal physical phone)*
 
 ## 8. Deck
 
