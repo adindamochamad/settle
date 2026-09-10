@@ -51,6 +51,10 @@ observed words, zero times. Settling p99 scales with `max_delay` by a factor of
 3.4x from the shortest to the longest setting — the dial genuinely trades
 latency for stability, and the instrument is what shows the exchange rate.
 
+![settling time vs max_delay](web/chart.svg)
+
+`make chart` regenerates this from `runs/` — see `chart.py`.
+
 ## Run it
 
 ```bash

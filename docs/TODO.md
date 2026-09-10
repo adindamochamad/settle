@@ -82,7 +82,9 @@ sweep's actual result.
       single-word revision — closest thing to the cold open PITCH.md wants.
       Confirm this is usable on video (zoom to the one word, not the full
       line) before locking it as the U3 demo clip.
-- [ ] Commit the corpus. Not yet done — ask before it happens.
+- [x] Corpus committed: `8a62e5a`.
+- [x] Public repo created and wired as origin: github.com/adindamochamad/settle
+      **[X1]**
 
 ## D2 — Fri 11 Sep · Gate: the chart exists as an image file
 
@@ -103,16 +105,22 @@ schedule assumed. Use the slack to start D3 early, not to polish.
 - [ ] Commit every surviving run. They are the evidence, not build output.
       **[X3]**
 
-**Chart (~90 min)**
+**Chart — done, Thu 10 Sep**
 
-- [ ] `chart.py`, SVG from the standard library — keeps the three-dependency
-      rule, and SVG is what the website wants anyway. matplotlib only as a
-      time-boxed fallback. **[G1, G2]**
-- [ ] Plot settling p50 and p95 against `max_delay`. Consider a second series
-      for the risk window; that is the number the sidecar argument rests on.
-      **[G1]**
-- [ ] Axis units, `n` on the figure, clock named in the caption. **[G3]**
-- [ ] Check at 1080p and at phone width. **[G4]**
+- [x] `chart.py`, SVG from the standard library, no plotting dependency added.
+      `make chart` regenerates `web/chart.svg` from `runs/` in one command.
+      Embedded in README. **[G1, G2]**
+- [x] p50 and p95 plotted against `max_delay`. p50 is flat at 0.000s at every
+      setting (median word never revises); p95 is the curve that matters —
+      0.721s → 2.796s, a 3.9x range. A risk-window series is still open, see
+      below.
+- [x] Axis units, per-point and total `n`, "wall clock" named on the y-axis
+      and in the caption. **[G3]**
+- [x] Checked at 800px and 390px (phone width) via `qlmanage` thumbnails —
+      vector text stays sharp at both. **[G4]**
+- [ ] Consider adding the risk window (first text → finalised) as a third
+      series. It is the number the sidecar sells and isn't on the chart yet —
+      not blocking, worth 15 minutes before D3.
 
 **Numbers (~30 min)**
 

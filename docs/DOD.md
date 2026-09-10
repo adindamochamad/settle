@@ -52,7 +52,7 @@ This is CLAUDE.md rule 1 made checkable.
 - [ ] G1 An image file lives in the repo, produced by a committed script — not exported by hand from a notebook.
 - [ ] G2 Regenerable from `runs/` in one command.
 - [ ] G3 Axes labelled with units, `n` shown on the figure, clock named in the caption.
-- [ ] G4 Legible at video resolution and on a phone screen.
+- [x] G4 Legible at video resolution and on a phone screen. *(SVG, checked at 800px and 390px)*
 
 ## 5. Sidecar
 
@@ -95,7 +95,7 @@ This is CLAUDE.md rule 1 made checkable.
 
 ## 10. Repository
 
-- [ ] X1 Public, with a LICENSE.
+- [x] X1 Public, with a LICENSE. *(github.com/adindamochamad/settle, MIT)*
 - [ ] X2 README contains no `TBD`.
 - [ ] X3 `runs/*.jsonl` committed — they are the evidence.
 - [ ] X4 On a clean clone: `pip install -r requirements.txt && make analyze` reproduces the README table.
