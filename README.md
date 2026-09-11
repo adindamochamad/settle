@@ -94,6 +94,14 @@ settled consumer, reading the same upstream feed with τ = 0.774s, never
 sees the false alarm at all; its first and only tier is the correct one.
 Verified reproducible across repeated runs against the same replay.
 
+A visual console for recording this lives at `web/console.html` — split
+view, naive left, settled right, with a live divergence indicator between
+them. Start the sidecar (`make sidecar` or `make demo`), then open the file
+directly in a browser; it connects to `ws://localhost:8000`. This is a local
+tool, not part of the published site — a browser blocks a page served over
+HTTPS from opening a plain `ws://` connection, so it cannot be hosted on
+GitHub Pages alongside `web/index.html`.
+
 ## Run it
 
 ```bash

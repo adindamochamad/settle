@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SETTLE — Live Dispatch Console</title>
+<style>
+  :root {
+    --bg: #05070a;
+    --panel: #0c1119;
+    --panel-2: #10161f;
+    --grid: #1c2530;
+    --edge: #253040;
+    --text: #dbe4ee;
+    --dim: #6b7b8c;
+    --dimmer: #3f4c5a;
+    --teal: #4fd1c5;
+    --amber: #f2a65a;
+    --red: #ff5d5d;
+    --red-glow: rgba(255, 93, 93, 0.35);
+    --standard: #7fa8c9;
+    --font: ui-monospace, Menlo, "SF Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: var(--font); -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-image:
+      radial-gradient(ellipse at 50% -10%, rgba(79,209,197,0.06), transparent 60%),
+      radial-gradient(ellipse at 50% 110%, rgba(242,166,90,0.05), transparent 60%);
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+
+  /* ---- header ---- */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 28px; border-bottom: 1px solid var(--grid);
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  }
+  .brand { display: flex; align-items: baseline; gap: 12px; }
+  .brand h1 {
+    font-size: 17px; letter-spacing: 0.14em; margin: 0; font-weight: 700;
+  }
+  .brand .sub { color: var(--dim); font-size: 12px; letter-spacing: 0.02em; }
+  .hdr-right { display: flex; align-items: center; gap: 18px; }
+  .status { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dim); }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--dimmer);
+    box-shadow: 0 0 0 0 transparent; transition: all 0.3s ease;
+  }
+  .dot.live { background: var(--teal); box-shadow: 0 0 10px 2px rgba(79,209,197,0.6); animation: blink 1.6s ease-in-out infinite; }
+  .dot.err { background: var(--red); box-shadow: 0 0 10px 2px var(--red-glow); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .controls { display: flex; align-items: center; gap: 10px; }
+  button {
+    background: var(--teal); color: #04211f; border: none; border-radius: 6px;
+    font-family: var(--font); font-size: 13px; font-weight: 700;
+    padding: 9px 18px; cursor: pointer; letter-spacing: 0.03em;
+    transition: transform 0.1s ease, box-shadow 0.2s ease;
+  }
+  button:hover { box-shadow: 0 0 16px rgba(79,209,197,0.35); }
+  button:active { transform: scale(0.97); }
+  button:disabled { background: var(--dimmer); color: var(--dim); cursor: default; box-shadow: none; }
+  .tau-field { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim); }
+  .tau-field input {
+    width: 62px; background: var(--panel-2); border: 1px solid var(--edge); color: var(--text);
+    font-family: var(--font); font-size: 12px; border-radius: 4px; padding: 5px 7px;
+  }
+  .clock { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; min-width: 92px; text-align: right; }
+
+  /* ---- main split ---- */
+  main {
+    flex: 1; display: grid; grid-template-columns: 1fr auto 1fr;
+    gap: 0; padding: 22px 28px 16px; align-items: stretch;
+  }
+  .panel {
+    background: var(--panel); border: 1px solid var(--grid); border-radius: 10px;
+    padding: 20px; display: flex; flex-direction: column; min-width: 0;
+    box-shadow: 0 20px 40px -20px rgba(0,0,0,0.6);
+  }
+  .panel-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .panel-head h2 { margin: 0; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; }
+  #naive .panel-head h2 { color: var(--amber); }
+  #settled .panel-head h2 { color: var(--teal); }
+  .panel-head .note { font-size: 11px; color: var(--dim); }
+
+  .transcript {
+    margin-top: 14px; min-height: 110px; font-size: 16px; line-height: 1.7;
+    padding: 14px 16px; background: var(--panel-2); border-radius: 8px;
+    border: 1px solid var(--grid); word-wrap: break-word;
+  }
+  .w { transition: background 0.15s ease, color 0.15s ease; padding: 0 1px; border-radius: 3px; }
+  .w-locked { color: var(--text); }
+  .w-live { color: var(--amber); }
+  #settled .w-live { color: var(--teal); }
+  .w-flash { background: var(--amber); color: #241a08; }
+
+  .tier-wrap { margin-top: 18px; text-align: center; }
+  .tier-badge {
+    display: inline-block; padding: 14px 30px; border-radius: 8px;
+    font-size: 20px; font-weight: 800; letter-spacing: 0.06em;
+    background: var(--panel-2); color: var(--dim); border: 1px solid var(--edge);
+    transition: all 0.25s ease; min-width: 220px;
+  }
+  .tier-badge.standard { color: var(--standard); border-color: var(--standard); }
+  .tier-badge.elevated { color: var(--amber); border-color: var(--amber); background: rgba(242,166,90,0.08); }
+  .tier-badge.critical {
+    color: var(--red); border-color: var(--red); background: rgba(255,93,93,0.1);
+    box-shadow: 0 0 24px var(--red-glow);
+  }
+  .tier-badge.pulse { animation: pulse 0.5s ease; }
+  @keyframes pulse { 0%{transform:scale(1)} 40%{transform:scale(1.06)} 100%{transform:scale(1)} }
+
+  .log { margin-top: 18px; flex: 1; overflow-y: auto; font-size: 12px; }
+  .log-title { color: var(--dim); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .log-entry {
+    display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--grid);
+    animation: slide-in 0.3s ease;
+  }
+  @keyframes slide-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .log-entry .t { color: var(--dimmer); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .log-entry .tier { font-weight: 700; white-space: nowrap; }
+  .log-entry .tier.standard { color: var(--standard); }
+  .log-entry .tier.elevated { color: var(--amber); }
+  .log-entry .tier.critical { color: var(--red); }
+
+  /* ---- center divider / mismatch indicator ---- */
+  .divider {
+    width: 64px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 10px; position: relative;
+  }
+  .divider .line {
+    width: 2px; flex: 1; background: var(--grid); border-radius: 2px; transition: background 0.3s ease;
+  }
+  .divider .badge {
+    font-size: 10px; letter-spacing: 0.08em; color: var(--dimmer); text-align: center;
+    padding: 6px 4px; border-radius: 6px; transition: all 0.3s ease; white-space: nowrap;
+  }
+  .divider.mismatch .line { background: var(--red); box-shadow: 0 0 14px var(--red-glow); }
+  .divider.mismatch .badge {
+    color: var(--red); background: rgba(255,93,93,0.12); border: 1px solid var(--red);
+    animation: pulse 0.6s ease infinite alternate;
+  }
+  @keyframes pulse { from { box-shadow: 0 0 6px var(--red-glow); } to { box-shadow: 0 0 18px var(--red-glow); } }
+
+  /* ---- footer ---- */
+  footer {
+    padding: 12px 28px 20px; color: var(--dimmer); font-size: 11px;
+    display: flex; justify-content: space-between; border-top: 1px solid var(--grid);
+  }
+  footer a { color: var(--dimmer); }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(5,7,10,0.92); display: flex;
+    align-items: center; justify-content: center; z-index: 10; text-align: center;
+    padding: 20px;
+  }
+  .overlay-box { max-width: 480px; }
+  .overlay h3 { color: var(--red); font-size: 15px; margin: 0 0 10px; }
+  .overlay p { color: var(--dim); font-size: 13px; line-height: 1.6; }
+  .overlay code {
+    display: block; background: var(--panel-2); border: 1px solid var(--edge);
+    border-radius: 6px; padding: 10px 14px; margin: 10px 0; color: var(--teal);
+    text-align: left; font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>SETTLE</h1>
+    <span class="sub">LIVE DISPATCH CONSOLE</span>
+  </div>
+  <div class="hdr-right">
+    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">idle</span></div>
+    <div class="clock" id="clock">0.0s / 0.0s</div>
+    <div class="tau-field">τ <input id="tauInput" type="number" step="0.001" value="0.774">s</div>
+    <div class="controls"><button id="playBtn">Play</button></div>
+  </div>
+</header>
+
+<main>
+  <section class="panel" id="naive">
+    <div class="panel-head">
+      <h2>Naive</h2>
+      <span class="note">acts the instant text appears</span>
+    </div>
+    <div class="transcript" id="naiveLine">&nbsp;</div>
+    <div class="tier-wrap"><div class="tier-badge" id="naiveTier">—</div></div>
+    <div class="log">
+      <div class="log-title">Actions fired</div>
+      <div id="naiveLog"></div>
+    </div>
+  </section>
+
+  <div class="divider" id="divider">
+    <div class="line"></div>
+    <div class="badge" id="dividerBadge">IN SYNC</div>
+    <div class="line"></div>
+  </div>
+
+  <section class="panel" id="settled">
+    <div class="panel-head">
+      <h2>Settled</h2>
+      <span class="note" id="settledNote">holds each word for τ</span>
+    </div>
+    <div class="transcript" id="settledLine">&nbsp;</div>
+    <div class="tier-wrap"><div class="tier-badge" id="settledTier">—</div></div>
+    <div class="log">
+      <div class="log-title">Actions fired</div>
+      <div id="settledLog"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Tiering is keyword matching only — no model anywhere. See <a href="../consumers.py">consumers.py</a>.</span>
+  <span id="sourceNote">source: —</span>
+</footer>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-box">
+    <h3>Sidecar not reachable</h3>
+    <p>This console connects to the SETTLE sidecar over WebSocket. Start it first:</p>
+    <code>make demo</code>
+    <p>or, to control the console yourself:</p>
+    <code>uvicorn sidecar:app --port 8000</code>
+    <p>then reload this page.</p>
+  </div>
+</div>
+
+<script>
+const HOST = "ws://localhost:8000";
+
+// Ported by hand from consumers.py's TIER_RULES / tier_for() - keep in sync
+// manually, there is no shared runtime between Python and this page.
+const TIER_RULES = [
+  [["trapped", "entrapped"], "CRITICAL - RESCUE"],
+  [["not breathing", "unresponsive", "no pulse"], "CRITICAL - MEDICAL"],
+  [["fire", "smoke", "alarm"], "ELEVATED - FIRE"],
+  [[], "STANDARD"],
+];
+function tierFor(line) {
+  const lower = line.toLowerCase();
+  for (const [keywords, name] of TIER_RULES) {
+    if (keywords.length === 0 || keywords.some(k => lower.includes(k))) return name;
+  }
+  return "STANDARD";
+}
+function tierClass(tier) {
+  if (tier.startsWith("CRITICAL")) return "critical";
+  if (tier.startsWith("ELEVATED")) return "elevated";
+  return "standard";
+}
+
+// Word alignment, ported from analyzer.overlaps()/apply() in analyzer.py.
+// Same rule as web/index.html's replay - kept in sync by hand across all
+// three (Python, index.html, this file). See docs/DOD.md S5: the rule
+// itself (overlap-based matching + retraction) must never grow a second
+// independent implementation of "which word is this."
+function overlap(a, b) {
+  const lo = Math.max(a[0], b[0]), hi = Math.min(a[1], b[1]);
+  if (hi <= lo) return 0;
+  const shorter = Math.min(a[1]-a[0], b[1]-b[0]);
+  return shorter <= 0 ? 0 : (hi-lo)/shorter;
+}
+
+class Panel {
+  constructor(id, prefix) {
+    this.slots = [];
+    this.tier = null;
+    this.lineEl = document.getElementById(prefix + "Line");
+    this.tierEl = document.getElementById(prefix + "Tier");
+    this.logEl = document.getElementById(prefix + "Log");
+    this.t0 = performance.now();
+  }
+
+  applyEvent(event) {
+    const span = [event.start, event.end];
+    let best = -1, score = 0;
+    this.slots.forEach((slot, i) => {
+      const sc = overlap(slot.span, span);
+      if (sc > score) { best = i; score = sc; }
+    });
+    if (best === -1 || score < 0.5) {
+      this.slots.push({ span, text: event.text });
+    } else {
+      this.slots[best] = { span, text: event.text };
+    }
+    this.slots.sort((a, b) => a.span[0] - b.span[0]);
+    this.render();
+    this.retier();
+  }
+
+  render() {
+    this.lineEl.innerHTML = this.slots.map(s =>
+      `<span class="w w-locked">${s.text}</span>`).join(" ") || "&nbsp;";
+  }
+
+  retier() {
+    const line = this.slots.map(s => s.text).join(" ");
+    const tier = tierFor(line);
+    if (tier === this.tier) return;
+    this.tier = tier;
+    const cls = tierClass(tier);
+    this.tierEl.textContent = tier;
+    this.tierEl.className = "tier-badge " + cls + " pulse";
+    setTimeout(() => this.tierEl.classList.remove("pulse"), 500);
+
+    const entry = document.createElement("div");
+    entry.className = "log-entry";
+    const secs = ((performance.now() - this.t0) / 1000).toFixed(1);
+    entry.innerHTML = `<span class="t">${secs}s</span><span class="tier ${cls}">${tier}</span>`;
+    this.logEl.prepend(entry);
+
+    onTierChange();
+  }
+}
+
+let naivePanel, settledPanel, naiveWS, settledWS, playing = false;
+
+function setStatus(state) {
+  const dot = document.getElementById("statusDot");
+  const text = document.getElementById("statusText");
+  dot.className = "dot" + (state === "live" ? " live" : state === "err" ? " err" : "");
+  text.textContent = state === "live" ? "live" : state === "err" ? "disconnected" : "idle";
+}
+
+function onTierChange() {
+  const divider = document.getElementById("divider");
+  const badge = document.getElementById("dividerBadge");
+  // Settled having no tier yet (still null, still holding) counts as a
+  // mismatch too if naive has already committed to something - "naive
+  // already acted, settled is still silent" is exactly the divergence this
+  // demo exists to show, not just "both disagree once both have spoken."
+  if (naivePanel.tier !== null && naivePanel.tier !== settledPanel.tier) {
+    divider.classList.add("mismatch");
+    badge.textContent = "DIVERGED";
+  } else {
+    divider.classList.remove("mismatch");
+    badge.textContent = "IN SYNC";
+  }
+}
+
+function connect(path, panel, onDone) {
+  const ws = new WebSocket(HOST + path);
+  ws.onopen = () => { document.getElementById("overlay").style.display = "none"; setStatus("live"); };
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.done) { onDone(); return; }
+    panel.applyEvent(msg);
+  };
+  ws.onerror = () => { document.getElementById("overlay").style.display = "flex"; setStatus("err"); };
+  ws.onclose = () => {};
+  return ws;
+}
+
+function resetPanels() {
+  for (const [id, prefix] of [["naive", "naive"], ["settled", "settled"]]) {
+    document.getElementById(prefix + "Line").innerHTML = "&nbsp;";
+    document.getElementById(prefix + "Tier").textContent = "—";
+    document.getElementById(prefix + "Tier").className = "tier-badge";
+    document.getElementById(prefix + "Log").innerHTML = "";
+  }
+  document.getElementById("divider").classList.remove("mismatch");
+  document.getElementById("dividerBadge").textContent = "IN SYNC";
+}
+
+function play() {
+  if (playing) return;
+  playing = true;
+  resetPanels();
+  naivePanel = new Panel("naive", "naive");
+  settledPanel = new Panel("settled", "settled");
+  const tau = parseFloat(document.getElementById("tauInput").value) || 0.774;
+  document.getElementById("settledNote").textContent = `holds each word for τ = ${tau}s`;
+
+  const btn = document.getElementById("playBtn");
+  btn.disabled = true;
+  btn.textContent = "Playing…";
+
+  let doneCount = 0;
+  const onDone = () => {
+    doneCount++;
+    if (doneCount === 2) {
+      playing = false;
+      btn.disabled = false;
+      btn.textContent = "Replay";
+    }
+  };
+
+  naiveWS = connect("/ws/naive", naivePanel, onDone);
+  settledWS = connect(`/ws/settled?tau=${tau}`, settledPanel, onDone);
+}
+
+document.getElementById("playBtn").addEventListener("click", play);
+// ?autoplay=1 starts the run automatically - useful when driving this page
+// from a screen-recording setup instead of clicking through by hand.
+if (new URLSearchParams(location.search).has("autoplay")) {
+  setTimeout(play, 400);
+}
+
+// Probe the sidecar on load so the "not reachable" overlay shows immediately
+// rather than only after the user hits Play.
+(function probe() {
+  const ws = new WebSocket(HOST + "/ws/naive");
+  ws.onopen = () => { ws.close(); document.getElementById("overlay").style.display = "none"; };
+  ws.onerror = () => { document.getElementById("overlay").style.display = "flex"; };
+})();
+</script>
+
+</body>
+</html>

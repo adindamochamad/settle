@@ -67,10 +67,12 @@ spoken, first text, last change, finalised, the risk-window band.*
 
 ### 1:10–2:50 — The side-by-side demo, full run, uncut
 
-*Screen: split view, naive console left, settled console right, same clip
-playing on both from the same upstream feed. Let it run start to finish —
-this block is the demo, not a summary of it. Minimal narration, three cues
-only, timed to the clip's own real timestamps:*
+*Screen: `web/console.html`, opened in a browser against a running
+`make sidecar`/`make demo` - naive left, settled right, same clip playing on
+both from the same upstream feed, the divider between them lighting up red
+on DIVERGED. Let it run start to finish - this block is the demo, not a
+summary of it. Minimal narration, three cues only, timed to the clip's own
+real timestamps:*
 
 **(≈0:03 into the clip) Same audio, both sides, right now.**
 
