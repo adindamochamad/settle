@@ -235,7 +235,12 @@ Nothing new starts today.
       `measure` all byte-identical to committed output. **[X4]**
 - [ ] Deck: PDF, ≤ 12 slides, charts reused as the same image files, no number
       absent from the README. **[P1, P2, P3]**
-- [ ] Write the video script word for word. Improvising on D5 costs takes.
+- [x] Video script written word for word in `docs/PITCH.md` ("## Script"
+      section). Every number re-verified fresh against `runs/` before
+      writing: 0.985s/3.441s p99 range, 3.5x scale, 1,227 words, tau=0.774s,
+      95.8% match rate. ~435 spoken words (~201s at 130wpm) against a 300s
+      budget - leaves room for the demo block to run mostly silent, as
+      PITCH.md's own table intends.
 - [ ] **23:59 — freeze.** Bug fixes only after this.
 
 ## D5 — Mon 14 Sep · Every asset recorded
