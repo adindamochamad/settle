@@ -233,8 +233,24 @@ Nothing new starts today.
 - [x] Git history searched for the key — clean. **[X5]**
 - [x] Clean-clone test: fresh clone, fresh venv, `make results`/`chart`/`site`/
       `measure` all byte-identical to committed output. **[X4]**
-- [ ] Deck: PDF, ≤ 12 slides, charts reused as the same image files, no number
-      absent from the README. **[P1, P2, P3]**
+- [x] Deck built: `docs/deck.html` (source, editable) -> `docs/deck.pdf`
+      (`make deck`, headless Chrome print-to-pdf). 12 slides exactly.
+      Slide 6 embeds `web/chart.svg` directly, not redrawn. Every number
+      cross-checked against README.md before committing.
+
+      Hit a real rabbit hole building it: qlmanage (used for every visual
+      check so far this project) renders wide, fixed-width layouts like
+      this one incorrectly - a table's last column and even plain wrapped
+      paragraph text were silently clipped, reproducibly, regardless of
+      table-layout, explicit widths, or a CSS Grid rewrite instead of
+      `<table>`. Spent real time chasing it as a CSS bug before testing the
+      *actual* export path (headless Chrome print-to-pdf) directly - which
+      rendered every slide perfectly on the first try. qlmanage is fine for
+      web/index.html and web/console.html (fluid, viewport-relative
+      layouts); it is not trustworthy for a fixed 1280x720 print layout.
+      Lesson for next time: when a static-preview tool and the real target
+      pipeline disagree, trust the real pipeline, and check it *before*
+      spending time debugging the preview. **[P1, P2, P3]**
 - [x] Video script written word for word in `docs/PITCH.md` ("## Script"
       section). Every number re-verified fresh against `runs/` before
       writing: 0.985s/3.441s p99 range, 3.5x scale, 1,227 words, tau=0.774s,

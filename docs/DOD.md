@@ -81,9 +81,9 @@ This is CLAUDE.md rule 1 made checkable.
 
 ## 8. Deck
 
-- [ ] P1 PDF, 12 slides or fewer.
-- [ ] P2 Charts are the same image files as the repo — not redrawn.
-- [ ] P3 Contains no number absent from the README.
+- [x] P1 PDF, 12 slides or fewer. *(docs/deck.html -> docs/deck.pdf via `make deck`, headless Chrome print-to-pdf; exactly 12)*
+- [x] P2 Charts are the same image files as the repo — not redrawn. *(slide 6 embeds ../web/chart.svg directly)*
+- [x] P3 Contains no number absent from the README. *(every figure cross-checked against README.md by script before committing)*
 
 ## 9. Video
 

@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SETTLE — Deck</title>
+<style>
+  :root {
+    --bg: #06080b;
+    --panel: rgba(18, 24, 33, 0.56);
+    --panel-2: rgba(9, 13, 19, 0.62);
+    --grid: rgba(255, 255, 255, 0.08);
+    --edge: rgba(255, 255, 255, 0.13);
+    --text: #e2e9f1;
+    --dim: #8291a3;
+    --dimmer: #4a5871;
+    --teal: #5fd9cc;
+    --amber: #eea866;
+    --red: #f2666a;
+    --standard: #8fb3d9;
+    --font: ui-monospace, Menlo, "SF Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: #000; color: var(--text);
+    font-family: var(--font); -webkit-font-smoothing: antialiased;
+  }
+  .toolbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    background: #0c1119; border-bottom: 1px solid var(--grid);
+    padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; color: var(--dim);
+  }
+  .toolbar b { color: var(--text); }
+  .toolbar button {
+    background: var(--teal); color: #042420; border: none; border-radius: 6px;
+    font-family: var(--font); font-size: 12px; font-weight: 700;
+    padding: 7px 14px; cursor: pointer;
+  }
+  .deck { padding-top: 46px; }
+
+  .slide {
+    width: 1280px; height: 720px; margin: 24px auto; position: relative;
+    background:
+      radial-gradient(ellipse 800px 450px at 15% -10%, rgba(242,166,90,0.10), transparent 60%),
+      radial-gradient(ellipse 800px 450px at 85% -10%, rgba(95,217,204,0.10), transparent 60%),
+      var(--bg);
+    border: 1px solid var(--grid); border-radius: 12px;
+    overflow: hidden; padding: 64px 76px;
+    display: flex; flex-direction: column;
+  }
+  .slide .kicker {
+    font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--amber); font-weight: 700; margin: 0 0 18px;
+  }
+  .slide h1 {
+    font-size: 40px; line-height: 1.2; margin: 0 0 20px; font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .slide h1 .accent { color: var(--teal); }
+  .slide p.lead { font-size: 19px; line-height: 1.55; color: var(--text); max-width: 980px; margin: 0 0 14px; }
+  .slide p.dim { font-size: 15px; line-height: 1.6; color: var(--dim); max-width: 900px; }
+  .slide .num { color: var(--teal); font-weight: 700; }
+  .slide .warn { color: var(--amber); font-weight: 700; }
+  .slide .crit { color: var(--red); font-weight: 700; }
+  .pageno {
+    position: absolute; bottom: 26px; right: 32px; font-size: 12px; color: var(--dimmer);
+  }
+  .brandmark {
+    position: absolute; bottom: 26px; left: 76px; font-size: 12px; color: var(--dimmer);
+    letter-spacing: 0.1em;
+  }
+
+  /* CSS grid for the data rows below, not <table> - simpler to size and
+     style consistently across the three tables on this deck. */
+  .grid-table { margin-top: 12px; font-size: 15px; width: 1128px; }
+  .grid-table .row {
+    display: grid; align-items: baseline;
+    border-bottom: 1px solid var(--grid); padding: 9px 0;
+  }
+  .grid-table .row.head {
+    color: var(--dim); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; font-weight: 700; padding-bottom: 10px;
+  }
+  .grid-table .row:last-child { border-bottom: none; }
+  .grid-table .cell { padding: 0 14px; }
+  .grid-table .cell.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .grid-table .cell:first-child { padding-left: 0; }
+
+  .stat-row { display: flex; gap: 48px; margin-top: 8px; }
+  .stat { }
+  .stat .big { font-size: 52px; font-weight: 800; color: var(--teal); line-height: 1; }
+  .stat .big.amber { color: var(--amber); }
+  .stat .big.red { color: var(--red); }
+  .stat .label { font-size: 13px; color: var(--dim); margin-top: 8px; max-width: 220px; }
+
+  .chart-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; margin-top: 8px; overflow: hidden; }
+  .chart-wrap img { max-width: 100%; max-height: 100%; }
+
+  .center-slide { align-items: center; justify-content: center; text-align: center; }
+  .center-slide .kicker { align-self: center; }
+  .title-word {
+    font-size: 88px; font-weight: 800; letter-spacing: 0.02em;
+    background: linear-gradient(120deg, #fff, var(--teal) 120%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin: 0;
+  }
+  .console-mock {
+    display: flex; gap: 20px; margin-top: 22px;
+  }
+  .console-mock .pane {
+    flex: 1; background: var(--panel); border: 1px solid var(--edge); border-radius: 12px;
+    padding: 20px; text-align: left;
+  }
+  .console-mock .pane h3 { margin: 0 0 10px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .console-mock .naive h3 { color: var(--amber); }
+  .console-mock .settled h3 { color: var(--teal); }
+  .console-mock .line { font-size: 15px; color: var(--dim); margin-bottom: 14px; }
+  .console-mock .badge {
+    display: inline-block; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 800;
+  }
+  .console-mock .badge.elevated { color: var(--amber); background: rgba(238,168,102,0.12); border: 1px solid var(--amber); }
+  .console-mock .badge.critical { color: var(--red); background: rgba(242,102,106,0.14); border: 1px solid var(--red); }
+
+  .closing-line {
+    font-size: 26px; font-style: normal; color: var(--text); font-weight: 700;
+    max-width: 900px; line-height: 1.5;
+  }
+  .links { margin-top: 28px; font-size: 15px; color: var(--dim); }
+  .links code { color: var(--teal); }
+
+  @media print {
+    body { background: #000; }
+    .toolbar { display: none; }
+    .deck { padding-top: 0; }
+    .slide {
+      margin: 0; border-radius: 0; border: none;
+      page-break-after: always; width: 100vw; height: 100vh;
+    }
+    .slide:last-child { page-break-after: auto; }
+  }
+  @page { size: 1280px 720px; margin: 0; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <span><b>SETTLE</b> — deck, 12 slides. Print this page (⌘/Ctrl+P) → Save as PDF, landscape, no margins.</span>
+  <button onclick="window.print()">Print / Save PDF</button>
+</div>
+
+<div class="deck">
+
+  <!-- 1: Title -->
+  <section class="slide center-slide">
+    <div class="kicker">Speechmatics track · AI Infra Summit Hackathon 2026</div>
+    <h1 class="title-word">SETTLE</h1>
+    <p class="lead" style="margin-top:18px">Streaming ASR tells you what it heard.<br>Nothing tells you when it stopped changing.</p>
+    <div class="pageno">1 / 12</div>
+  </section>
+
+  <!-- 2: The gap -->
+  <section class="slide">
+    <div class="kicker">The gap</div>
+    <h1>Two numbers, and a blind spot<br>in <span class="accent">between</span> them</h1>
+    <p class="lead">Every ASR vendor publishes <b>word error rate</b> — was the final text
+      right — and <b>latency</b> — how fast did it arrive.</p>
+    <p class="lead">Neither describes the interval where the text is visible, plausible,
+      and <b>still changing</b>. Nobody publishes that number.</p>
+    <p class="dim">We call it <b>settling time</b>. This deck is the instrument that
+      measures it, and the sidecar that buys it back.</p>
+    <div class="brandmark">SETTLE</div>
+    <div class="pageno">2 / 12</div>
+  </section>
+
+  <!-- 3: What settling time is -->
+  <section class="slide">
+    <div class="kicker">Definition</div>
+    <h1>What <span class="accent">settling time</span> is</h1>
+    <p class="lead">A word appears the moment the engine has a guess. That guess isn't
+      always the last one.</p>
+    <div class="grid-table">
+      <div class="row head" style="grid-template-columns: 180px 100px 1fr">
+        <div class="cell">Quantity</div><div class="cell">Clock</div><div class="cell">Definition</div>
+      </div>
+      <div class="row" style="grid-template-columns: 180px 100px 1fr">
+        <div class="cell">Emission lag</div><div class="cell">audio</div><div class="cell">how long before any text for a word appeared</div>
+      </div>
+      <div class="row" style="grid-template-columns: 180px 100px 1fr">
+        <div class="cell">Settling time</div><div class="cell">wall</div><div class="cell">how long the text kept changing after it first appeared</div>
+      </div>
+      <div class="row" style="grid-template-columns: 180px 100px 1fr">
+        <div class="cell">Risk window</div><div class="cell">wall</div><div class="cell">how long a word stayed visible, still revisable</div>
+      </div>
+    </div>
+    <p class="dim" style="margin-top:16px">Hold a word for <b>τ</b> seconds after its last change, and you know it's done moving.</p>
+    <div class="brandmark">SETTLE</div>
+    <div class="pageno">3 / 12</div>
+  </section>
+
+  <!-- 4: The cold open / false alarm -->
+  <section class="slide">
+    <div class="kicker">The problem, live</div>
+    <h1>A real console just called in<br>a fire that isn't happening</h1>
+    <div class="console-mock">
+      <div class="pane naive">
+        <h3>Naive</h3>
+        <div class="line">"...working fire me"</div>
+        <div class="badge elevated">ELEVATED - FIRE</div>
+      </div>
+      <div class="pane settled">
+        <h3>Settled (τ = 0.774s)</h3>
+        <div class="line">— holding —</div>
+        <div class="badge critical">waiting</div>
+      </div>
+    </div>
+    <p class="dim" style="margin-top:20px">Real, unedited recording — <code>runs/09_md1.0.jsonl</code>. The naive
+      console already dispatched. It's about to correct itself.</p>
+    <div class="brandmark">SETTLE</div>
+    <div class="pageno">4 / 12</div>
+  </section>
+
+  <!-- 5: Method -->
+  <section class="slide">
+    <div class="kicker">Method</div>
+    <h1>Ten clips. One instrument.<br>Four settings swept.</h1>
+    <p class="lead">One speaker, recorded at real-time pace, streamed to Speechmatics and
+      logged with arrival timestamps — never interpreted at capture time.</p>
+    <p class="lead">Every clip recorded at <span class="num">max_delay</span> ∈
+      {0.7, 1.0, 2.0, 4.0} — the engine's own control over when a final is emitted.</p>
+    <p class="dim">Every number that follows traces back to a committed run file. Reproduced
+      with one command: <code>make results</code>.</p>
+    <div class="brandmark">SETTLE</div>
+    <div class="pageno">5 / 12</div>
+  </section>
+
+  <!-- 6: The curve -->
+  <section class="slide">
+    <div class="kicker">The instrument</div>
+    <h1>Settling time vs <span class="accent">max_delay</span></h1>
+    <div class="chart-wrap"><img src="../web/chart.svg" alt="settling time p50 and p95 vs max_delay"></div>
+    <div class="brandmark">SETTLE</div>
+    <div class="pageno">6 / 12</div>
+  </section>
+
+  <!-- 7: Results table -->
+  <section class="slide">
+    <div class="kicker">Results</div>
+    <h1>The measured table</h1>
+    <div class="grid-table">
+      <div class="row head" style="grid-template-columns: 130px 100px 140px 140px 130px 1fr">
+        <div class="cell">max_delay</div><div class="cell num">words</div><div class="cell num">settling p50</div><div class="cell num">settling p99</div><div class="cell num">revised</div><div class="cell num">revised after final</div>
+      </div>
+      <div class="row" style="grid-template-columns: 130px 100px 140px 140px 130px 1fr">
+        <div class="cell">0.7</div><div class="cell num">308</div><div class="cell num">0.000s</div><div class="cell num">0.985s</div><div class="cell num">32.8%</div><div class="cell num">0.0%</div>
+      </div>
+      <div class="row" style="grid-template-columns: 130px 100px 140px 140px 130px 1fr">
+        <div class="cell">1.0</div><div class="cell num">304</div><div class="cell num">0.000s</div><div class="cell num">1.154s</div><div class="cell num">33.6%</div><div class="cell num">0.0%</div>
+      </div>
+      <div class="row" style="grid-template-columns: 130px 100px 140px 140px 130px 1fr">
+        <div class="cell">2.0</div><div class="cell num">304</div><div class="cell num">0.000s</div><div class="cell num">1.846s</div><div class="cell num">41.4%</div><div class="cell num">0.0%</div>
+      </div>
+      <div class="row" style="grid-template-columns: 130px 100px 140px 140px 130px 1fr">
+        <div class="cell">4.0</div><div class="cell num">311</div><div class="cell num">0.000s</div><div class="cell num">3.441s</div><div class="cell num">45.0%</div><div class="cell num">0.0%</div>
+      </div>
+    </div>
+    <p class="dim" style="margin-top:18px">Pasted from <code>make results</code>, never typed.</p>
+    <div class="brandmark">SETTLE</div>
+    <div class="pageno">7 / 12</div>
+  </section>
+
+  <!-- 8: Headline -->
+  <section class="slide">
+    <div class="kicker">The headline</div>
+    <h1>Final really is final.<br>It just takes a while to <span class="accent">get</span> there.</h1>
+    <div class="stat-row">
+      <div class="stat"><div class="big">1,227</div><div class="label">words observed across the full sweep</div></div>
+      <div class="stat"><div class="big">0.0%</div><div class="label">changed after their AddTranscript</div></div>
+      <div class="stat"><div class="big amber">3.5×</div><div class="label">settling p99 scales from max_delay 0.7 to 4.0</div></div>
+    </div>
+    <p class="dim" style="margin-top:28px">The danger isn't that finals lie. It's how long a word sits in the
+      open, looking final, before it actually is one.</p>
+    <div class="brandmark">SETTLE</div>
+    <div class="pageno">8 / 12</div>
+  </section>
+
+  <!-- 9: The sidecar -->
+  <section class="slide">
+    <div class="kicker">The sidecar</div>
+    <h1>One feed in.<br>Two streams out.</h1>
+    <p class="lead"><code>sidecar.py</code> holds a word until its text has been stable for
+      <b>τ</b>, then releases it once. One upstream connection, byte-identical input to
+      both consumers.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="big">0.774s</div><div class="label">default τ — settling p95 at max_delay=1.0</div></div>
+    </div>
+    <div class="brandmark">SETTLE</div>
+    <div class="pageno">9 / 12</div>
+  </section>
+
+  <!-- 10: Sidecar results -->
+  <section class="slide">
+    <div class="kicker">The trade</div>
+    <h1>τ has to match its <span class="accent">regime</span></h1>
+    <div class="grid-table">
+      <div class="row head" style="grid-template-columns: 1fr 110px 170px 170px 110px">
+        <div class="cell"></div><div class="cell num">tokens</div><div class="cell num">residual retraction</div><div class="cell num">added latency p50</div><div class="cell num">p95</div>
+      </div>
+      <div class="row" style="grid-template-columns: 1fr 110px 170px 170px 110px">
+        <div class="cell">md=1.0 (τ calibrated here)</div><div class="cell num">307</div><div class="cell num">4.2%</div><div class="cell num">0.774s</div><div class="cell num">0.774s</div>
+      </div>
+      <div class="row" style="grid-template-columns: 1fr 110px 170px 170px 110px">
+        <div class="cell">all four max_delay pooled</div><div class="cell num">1,400</div><div class="cell num">13.9%</div><div class="cell num">0.774s</div><div class="cell num">1.734s</div>
+      </div>
+    </div>
+    <p class="dim" style="margin-top:18px">The same τ = 0.774s holds retraction to <span class="num">2.3%</span>
+      at <code>max_delay=0.7</code> — and lets it climb to <span class="warn">24.9%</span>
+      at <code>max_delay=4.0</code>. Settling simply takes longer there.</p>
+    <div class="brandmark">SETTLE</div>
+    <div class="pageno">10 / 12</div>
+  </section>
+
+  <!-- 11: The demo result -->
+  <section class="slide">
+    <div class="kicker">The demo</div>
+    <h1>Same input. One extra<br>second of patience.</h1>
+    <div class="console-mock">
+      <div class="pane naive">
+        <h3>Naive</h3>
+        <div class="line">ELEVATED - FIRE → STANDARD → CRITICAL - RESCUE</div>
+        <div class="badge elevated">false alarm, fired and reversed</div>
+      </div>
+      <div class="pane settled">
+        <h3>Settled</h3>
+        <div class="line">CRITICAL - RESCUE, once</div>
+        <div class="badge critical">correct, first time</div>
+      </div>
+    </div>
+    <p class="dim" style="margin-top:20px">Verified reproducible across repeated live runs against the same
+      replay — <code>runs/09_md1.0.jsonl</code>, <code>make demo</code>.</p>
+    <div class="brandmark">SETTLE</div>
+    <div class="pageno">11 / 12</div>
+  </section>
+
+  <!-- 12: Closing -->
+  <section class="slide center-slide">
+    <div class="kicker">Speechmatics track · AI Infra Summit Hackathon 2026</div>
+    <p class="closing-line">"The team that measured how long<br><span class="accent">‘final’</span> isn't final."</p>
+    <div class="links">
+      github.com/adindamochamad/settle &nbsp;·&nbsp; adindamochamad.github.io/settle
+    </div>
+    <div class="pageno">12 / 12</div>
+  </section>
+
+</div>
+
+</body>
+</html>

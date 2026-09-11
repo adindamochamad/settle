@@ -2,7 +2,7 @@ PY ?= $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
 CLIP ?= call1
 MD ?= 1.0
 
-.PHONY: setup prep record sweep sweepall analyze results chart site sidecar measure demo clean
+.PHONY: setup prep record sweep sweepall analyze results chart site sidecar measure demo deck clean
 
 setup:
 	$(PY) -m pip install -r requirements.txt
@@ -63,6 +63,12 @@ demo:
 	sleep 2; \
 	$(PY) consumers.py; \
 	kill $$pid 2>/dev/null
+
+deck:
+	"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless \
+		--disable-gpu --no-sandbox --print-to-pdf-no-header --no-pdf-header-footer \
+		--print-to-pdf="docs/deck.pdf" "file://$(CURDIR)/docs/deck.html" 2>/dev/null
+	@echo "docs/deck.pdf written"
 
 clean:
 	rm -rf __pycache__
